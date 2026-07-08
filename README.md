@@ -105,10 +105,13 @@ uv tool install -q --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
   Kiro tool approvals stay answerable in the embedded Terminal; supported
   one-time approvals also appear as Chat cards. See
   `docs/kiro-native-elicitation.md`.
-- **`tmux`**, required by the native `omnigent <harness>` terminal wrappers
-  (`claude`, `codex`, `cursor`, `hermes`, `kiro`, `pi`)
+- **`tmux`** on Linux/macOS, required by the native `omnigent <harness>`
+  terminal wrappers (`claude`, `codex`, `cursor`, `hermes`, `kiro`, `pi`)
   (`brew install tmux` / `apt install tmux`; the installer offers
   to install it for you).
+- **`psmux`** on native Windows, required for Omnigent-managed interactive
+  terminal environments and embedded terminal attach. It provides the
+  Windows-compatible terminal multiplexer backend used instead of tmux.
 - **`bubblewrap`** (`bwrap`), **Linux only**. The native `omnigent <harness>`
   terminal wrappers and the `pi` harness wrap each agent
   terminal in a `bwrap` OS-sandbox; on Linux that isolation is mandatory, so a
@@ -126,8 +129,9 @@ uv tool install -q --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
 <details>
 <summary>Windows (native)</summary>
 
-Omnigent runs natively on Windows in a degraded mode. The `install_oss.sh`
-bootstrap is POSIX-only, so install with `uv` directly:
+Omnigent runs natively on Windows. Use PowerShell or Windows Terminal; the
+POSIX `install_oss.sh` bootstrap is for Linux/macOS, so install with `uv`
+directly:
 
 ```powershell
 uv tool install --python 3.12 omnigent
@@ -135,15 +139,17 @@ uv tool install --python 3.12 omnigent
 uv tool install --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
 ```
 
-What works on Windows: `omnigent server`, the web UI, and the SDK-based
-harnesses (`omnigent run <agent.yaml>` with the claude-sdk / cursor / codex
-harnesses). Agents run under a Windows **Job Object** for process-tree
-containment.
+What works on Windows: `omnigent server`, the web UI, SDK-based harnesses
+(`omnigent run <agent.yaml>` with the claude-sdk / cursor / codex harnesses),
+and Omnigent-managed interactive terminal environments when `psmux` is
+installed and on `PATH`. On Windows, Omnigent selects the `psmux` terminal
+backend instead of the POSIX `tmux`/PTY backend; terminal capture, input, and
+embedded web attach use that backend. Agents run under a Windows **Job Object**
+for process-tree containment.
 
 What is **not** available on Windows (use Linux/macOS, or WSL, for these):
 
-- the native `omnigent claude` / `omnigent codex` / `omnigent cursor`
-  tmux/PTY terminal wrappers (run an SDK harness or the web UI instead);
+- POSIX `tmux`/PTY terminal behavior and tmux control-mode attach;
 - `bwrap`/`seatbelt` filesystem & network sandboxing and the L7 egress proxy
   — the Job Object backend contains the process tree and enforces resource
   limits but does **not** isolate the filesystem or network.
