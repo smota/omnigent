@@ -45,7 +45,7 @@ from urllib.parse import quote
 
 from omnigent.inner.datamodel import OSEnvSpec, TerminalEnvSpec
 from omnigent.inner.terminal import TerminalInstance
-from omnigent.terminals.backend import TerminalMuxBackend, TmuxTerminalMuxBackend
+from omnigent.terminals.backend import TerminalMuxBackend, default_terminal_mux_backend
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ class TerminalRegistry:
             tmux backend so current Linux/macOS behavior remains unchanged.
         """
         self._conversation_link_base_url = conversation_link_base_url
-        self._backend = backend or TmuxTerminalMuxBackend()
+        self._backend = backend or default_terminal_mux_backend()
         # Two-level dict: conversation_id -> (name, key) -> instance.
         # Per-conversation maps make ``cleanup_conversation`` cheap
         # (one pop) and ``list_for_conversation`` direct.

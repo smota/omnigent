@@ -845,3 +845,41 @@ def test_multiple_terminals_per_conversation(tmp_path: Path) -> None:
 
     for (name, key), inst in instances.items():
         assert reg.get("conv_a", name, key) is inst
+
+
+@pytest.mark.skipif(shutil.which("psmux") is None, reason="psmux not installed")
+@pytest.mark.windows_only
+async def test_windows_psmux_backend_launch_send_read_close(tmp_path: Path) -> None:
+    """psmux backend supports the basic registry lifecycle on Windows."""
+    from omnigent.terminals.backend import PsmuxTerminalMuxBackend
+
+    reg = TerminalRegistry(backend=PsmuxTerminalMuxBackend())
+    spec = TerminalEnvSpec(
+        command="powershell.exe",
+        args=["-NoProfile", "-NoExit", "-Command", "Write-Output ready"],
+        os_env=OSEnvSpec(
+            type="caller_process",
+            cwd=str(tmp_path),
+            sandbox=OSEnvSandboxSpec(type="none"),
+        ),
+    )
+    instance = await reg.launch("conv_psmux", "shell", "s1", spec)
+    try:
+        assert instance.running is True
+        read = {}
+        for _ in range(20):
+            await asyncio.sleep(0.2)
+            read = await instance.read()
+            if "ready" in read.get("screen", ""):
+                break
+        assert "ready" in read.get("screen", "")
+        sent = await instance.send("Write-Output hi", keys="Enter")
+        assert sent == {"status": "sent"}
+        for _ in range(20):
+            await asyncio.sleep(0.2)
+            read = await instance.read()
+            if "hi" in read.get("screen", ""):
+                break
+        assert "hi" in read.get("screen", "")
+    finally:
+        await reg.shutdown()
