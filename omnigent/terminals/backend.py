@@ -45,6 +45,8 @@ class TerminalMuxBackend(Protocol):
 class PsmuxTerminalInstance(TerminalInstance):
     """Terminal instance launched through psmux on native Windows."""
 
+    backend_name: str = "psmux"
+
     @property
     def tmux_target(self) -> str:
         safe_name = "".join(ch if ch.isalnum() else "-" for ch in self.name)
@@ -73,7 +75,7 @@ class PsmuxTerminalInstance(TerminalInstance):
             "-c",
             effective_cwd,
             "--",
-            self.command,
+            shutil.which(self.command) or self.command,
             *self.args,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,

@@ -503,6 +503,81 @@ def _coalesce_limit_after_input(last_client_input_at: float | None) -> int:
     return _WS_COALESCE_MAX_BYTES
 
 
+async def bridge_capture_to_websocket(
+    websocket: WebSocket,
+    *,
+    instance: object,
+    read_only: bool,
+    on_client_interaction: Callable[[], None] | None = None,
+    poll_interval_s: float = 0.25,
+) -> None:
+    """Bridge a capture/send terminal backend to an accepted websocket.
+
+    This fallback is used for Windows psmux, where the POSIX PTY attach path is
+    unavailable. It streams screen snapshots via the terminal instance's
+    ``read()`` method and forwards simple text input via ``send()``.
+    """
+    if on_client_interaction is not None:
+        on_client_interaction()
+    last_screen = ""
+
+    async def _capture_loop() -> None:
+        nonlocal last_screen
+        while bool(getattr(instance, "running", False)):
+            read = await instance.read()  # type: ignore[attr-defined]
+            screen = read.get("screen", "") if isinstance(read, dict) else ""
+            if screen != last_screen:
+                last_screen = screen
+                await websocket.send_bytes(screen.encode("utf-8", errors="replace"))
+            await asyncio.sleep(poll_interval_s)
+
+    async def _input_loop() -> None:
+        while True:
+            msg = await websocket.receive()
+            if on_client_interaction is not None:
+                on_client_interaction()
+            if msg.get("type") == "websocket.disconnect":
+                return
+            if msg.get("text") is not None:
+                try:
+                    json.loads(msg["text"])
+                except (json.JSONDecodeError, ValueError):
+                    pass
+                continue
+            data = msg.get("bytes")
+            if data is None or read_only:
+                continue
+            text = data.decode("utf-8", errors="ignore")
+            if not text:
+                continue
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
+            parts = text.split("\n")
+            for index, part in enumerate(parts):
+                keys = "Enter" if index < len(parts) - 1 else ""
+                await instance.send(part or None, keys=keys)  # type: ignore[attr-defined]
+
+    capture_task = asyncio.create_task(_capture_loop(), name="terminal-capture-to-ws")
+    input_task = asyncio.create_task(_input_loop(), name="terminal-ws-to-capture")
+    try:
+        done, pending = await asyncio.wait(
+            {capture_task, input_task},
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        for task in pending:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        for task in done:
+            exc = task.exception()
+            if exc is not None:
+                _logger.warning("capture-attach: bridge task crashed: %r", exc)
+    finally:
+        if on_client_interaction is not None:
+            on_client_interaction()
+        with contextlib.suppress(RuntimeError):
+            await websocket.close()
+
+
 async def bridge_tmux_pty_to_websocket(
     websocket: WebSocket,
     *,

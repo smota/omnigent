@@ -85,6 +85,7 @@ from omnigent.spec.types import AgentSpec, LocalToolInfo, SkillSpec
 from omnigent.terminals.control_bridge import bridge_tmux_control_to_websocket
 from omnigent.terminals.ws_bridge import (
     WS_CLOSE_TERMINAL_NOT_FOUND,
+    bridge_capture_to_websocket,
     bridge_tmux_pty_to_websocket,
 )
 from omnigent.tools.builtins.load_skill import (
@@ -16937,6 +16938,14 @@ def create_runner_app(
             override=transport,
             spec_transport=entry.instance.terminal_transport,
         )
+        if getattr(entry.instance, "backend_name", "tmux") == "psmux":
+            await bridge_capture_to_websocket(
+                websocket,
+                instance=entry.instance,
+                read_only=read_only,
+                on_client_interaction=entry.instance.note_client_interaction,
+            )
+            return
         bridge = (
             bridge_tmux_control_to_websocket
             if resolved_transport == TERMINAL_TRANSPORT_CONTROL

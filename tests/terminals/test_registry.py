@@ -883,3 +883,54 @@ async def test_windows_psmux_backend_launch_send_read_close(tmp_path: Path) -> N
         assert "hi" in read.get("screen", "")
     finally:
         await reg.shutdown()
+
+
+async def test_capture_bridge_streams_read_and_forwards_input() -> None:
+    """Capture bridge streams snapshots and sends websocket input to backend."""
+    from omnigent.terminals.ws_bridge import bridge_capture_to_websocket
+
+    class _FakeInstance:
+        running = True
+        sent: list[tuple[str | None, str]] = []
+        reads = 0
+
+        async def read(self) -> dict[str, object]:
+            self.reads += 1
+            if self.reads >= 2:
+                self.running = False
+            return {"screen": "ready"}
+
+        async def send(self, text: str | None = None, *, keys: str = "Enter") -> dict[str, str]:
+            self.sent.append((text, keys))
+            return {"status": "sent"}
+
+    class _FakeWebSocket:
+        sent_bytes: list[bytes]
+        closed = False
+
+        def __init__(self) -> None:
+            self.sent_bytes = []
+            self._frames = [
+                {"type": "websocket.receive", "bytes": b"echo hi\r"},
+                {"type": "websocket.disconnect"},
+            ]
+
+        async def send_bytes(self, data: bytes) -> None:
+            self.sent_bytes.append(data)
+
+        async def receive(self) -> dict[str, object]:
+            await asyncio.sleep(0)
+            return self._frames.pop(0)
+
+        async def close(self, code: int = 1000, reason: str = "") -> None:
+            del code, reason
+            self.closed = True
+
+    instance = _FakeInstance()
+    ws = _FakeWebSocket()
+
+    await bridge_capture_to_websocket(ws, instance=instance, read_only=False, poll_interval_s=0)
+
+    assert b"ready" in ws.sent_bytes
+    assert ("echo hi", "Enter") in instance.sent
+    assert ws.closed is True
