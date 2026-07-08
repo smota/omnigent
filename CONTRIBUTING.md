@@ -11,13 +11,11 @@ configuration in issues, tests, examples, or logs.
 This is a Python package with an optional frontend under `web/`. Use
 [`uv`](https://docs.astral.sh/uv/) for local development:
 
-**Supported dev OS: macOS or Linux.** Native Windows is not supported for
-development — some test dependencies are POSIX-only (`pexpect`/`pyte` are
-excluded on Windows), a few modules import POSIX stdlib or call `os.getuid()`
-at import time, and the `pre-commit` hooks assume the Unix `.venv/bin/` layout,
-so `pytest` and `pre-commit` cannot pass natively. On Windows, use
-**WSL2 (Ubuntu)** and clone into the **Linux** filesystem (`~/…`, not `/mnt/c`);
-this matches CI. Git Bash is not sufficient — it runs native-Windows Python.
+**Supported dev OS: macOS, Linux, and WSL2.** Native Windows support is
+being added incrementally. Use the [Windows QA matrix](docs/windows-qa-matrix.md)
+to decide which native PowerShell checks, screenshots, and known-gap notes are
+required for Windows-facing PRs. POSIX terminal-wrapper coverage still requires
+Linux, macOS, or WSL2.
 
 Install local prerequisites first:
 
