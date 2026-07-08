@@ -1,0 +1,173 @@
+{
+  "ciCommands": [
+    "uv run pytest -q",
+    "uv run ruff check .",
+    "uv run ruff format --check .",
+    "uv run pre-commit run --all-files"
+  ],
+  "bounded": {
+    "allowedExactPaths": [
+      "README.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "CODEX.md",
+      "AGY.md",
+      "agent-workflow.config.json"
+    ],
+    "allowedPathPrefixes": [
+      "docs/",
+      "agents/templates/",
+      "agents/workflows/",
+      "agents/tools/",
+      "agents/evals/",
+      "scripts/",
+      "lib/"
+    ],
+    "deniedPathFragments": [
+      "/auth/",
+      "/billing/",
+      "/migrations/"
+    ],
+    "defaultBase": "origin/main"
+  },
+  "branching": {
+    "trunk": "main",
+    "releaseCandidate": null,
+    "integration": "development",
+    "directEditDeniedBranches": [
+      "main",
+      "development"
+    ],
+    "defaultPrTarget": "main",
+    "promotionOrder": [
+      "development",
+      "main"
+    ],
+    "workBranchPrefixes": [
+      "work/",
+      "feature/",
+      "feat/",
+      "fix/",
+      "hotfix/",
+      "spike/",
+      "chore/",
+      "docs/",
+      "test/"
+    ],
+    "compatibilityBranchPrefixes": [
+      "issue/",
+      "wt/",
+      "claude/"
+    ],
+    "requireBoundedWorkBranch": true
+  },
+  "integrationLifecycle": {
+    "integrationBranch": "development",
+    "trunkBranch": "main",
+    "referenceKeywords": [
+      "Closes",
+      "Refs"
+    ],
+    "addLabels": [],
+    "closeIntegratedIssues": false
+  },
+  "routing": {
+    "defaultMode": "single-agent",
+    "agents": {
+      "claude": {
+        "enabled": true,
+        "callWorkflowDoc": "docs/agents/claude-routing.md",
+        "defaultExecutionTarget": "claude-cli"
+      },
+      "codex": {
+        "enabled": true,
+        "callWorkflowDoc": "docs/agents/codex-routing.md",
+        "defaultExecutionTarget": "codex-cli"
+      },
+      "agy": {
+        "enabled": true,
+        "callWorkflowDoc": "docs/agents/agy-routing.md",
+        "defaultExecutionTarget": "agy-cli"
+      },
+      "pi": {
+        "enabled": true,
+        "callWorkflowDoc": "docs/agents/pi-routing.md",
+        "defaultExecutionTarget": "pi-parent"
+      }
+    },
+    "roles": {
+      "product-manager": {
+        "owner": "claude",
+        "fallbacks": [
+          "agy",
+          "codex",
+          "pi"
+        ]
+      },
+      "analyst": {
+        "owner": "claude",
+        "fallbacks": [
+          "agy",
+          "codex",
+          "pi"
+        ]
+      },
+      "architect": {
+        "owner": "claude",
+        "fallbacks": [
+          "agy",
+          "codex",
+          "pi"
+        ]
+      },
+      "developer-planning": {
+        "owner": "claude",
+        "fallbacks": [
+          "codex",
+          "agy",
+          "pi"
+        ]
+      },
+      "developer": {
+        "owner": "claude",
+        "fallbacks": [
+          "codex",
+          "agy",
+          "pi"
+        ]
+      },
+      "tester": {
+        "owner": "claude",
+        "fallbacks": [
+          "codex",
+          "agy",
+          "pi"
+        ]
+      },
+      "review": {
+        "owner": "claude",
+        "fallbacks": [
+          "agy",
+          "codex",
+          "pi"
+        ]
+      },
+      "tech-writer": {
+        "owner": "claude",
+        "fallbacks": [
+          "agy",
+          "codex",
+          "pi"
+        ]
+      },
+      "pr-readiness": {
+        "owner": "claude",
+        "fallbacks": [
+          "agy",
+          "codex",
+          "pi"
+        ]
+      }
+    }
+  }
+}
