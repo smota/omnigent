@@ -3,6 +3,26 @@
 Guidance for AI agents (Claude Code, Copilot, Cursor, etc.) working in this
 repository. See `CONTRIBUTING.md` for the full contributor workflow.
 
+## Multi-agent SDLC workflow (fork-local enablement)
+
+<!-- fork-local: multi-agent-sdlc enablement; exclude from upstream functionality PRs -->
+
+This fork uses `multi-agent-sdlc` for issue-scoped development while preserving
+this repository's existing contributor rules. Treat this section as fork-local
+process guidance: when opening functionality PRs to `omnigent-ai/omnigent`, base
+work on `upstream/main` or cherry-pick only functionality commits so these
+process-only edits are not included.
+
+- Enabled agents: Claude and Codex only.
+- Default execution: single-agent per issue, with optional routed subagents when
+  they add clear value.
+- Branch strategy: one issue branch per task, e.g.
+  `feat/windows-issue-1-psmux-backend`.
+- Scratch artifacts such as `.agent-runs/` are local workflow state and must not
+  be committed.
+- Preserve existing instructions in this file, `CLAUDE.md`, `CODEX.md`, and the
+  PR template; merge process updates instead of overwriting project guidance.
+
 ## Committing
 
 Run the `pre-commit` hook before committing (`pre-commit run --all-files`, or
