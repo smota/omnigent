@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from omnigent.entities import Conversation
@@ -31,6 +32,25 @@ class _FakeWebSocket:
         :returns: Empty frame string.
         """
         return ""
+
+
+class _FakeTransportLocator:
+    """Transport locator test double."""
+
+    def __init__(self) -> None:
+        self.client = httpx.AsyncClient(base_url="http://runner-test")
+        self.requested: list[str] = []
+        self.closed = False
+
+    def client_for_runner(self, runner_id: str) -> httpx.AsyncClient:
+        """Record and return a stable client."""
+        self.requested.append(runner_id)
+        return self.client
+
+    async def aclose(self) -> None:
+        """Close the fake client."""
+        self.closed = True
+        await self.client.aclose()
 
 
 class _ConversationStore:
@@ -196,13 +216,22 @@ async def test_runner_router_uses_pinned_runner_when_multiple_online() -> None:
     registry.register("runner_one", _FakeWebSocket(), _hello(harnesses=["codex"]))
     registry.register("runner_two", _FakeWebSocket(), _hello(harnesses=["codex"]))
     store = _ConversationStore({"conv_test": _conversation(runner_id="runner_two")})
-    router = RunnerRouter(registry=registry, conversation_store=store)  # type: ignore[arg-type]
+    locator = _FakeTransportLocator()
+    router = RunnerRouter(
+        registry=registry,
+        conversation_store=store,  # type: ignore[arg-type]
+        transport_locator=locator,
+    )
     try:
         routed = router.client_for_conversation(conversation_id="conv_test", harness="codex")
 
         assert routed.runner_id == "runner_two"
+        assert routed.client is locator.client
+        assert locator.requested == ["runner_two"]
     finally:
         await router.aclose()
+
+    assert locator.closed is True
 
 
 @pytest.mark.asyncio
