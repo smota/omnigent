@@ -9,7 +9,19 @@ and ``_forward_pty_to_ws`` PTY→WS frame coalescing (queued bursts merge
 into one frame; a lone keystroke still flushes immediately).
 """
 
+# ruff: noqa: E402 - Windows module skip must run before POSIX-only imports.
+
 from __future__ import annotations
+
+import os
+
+import pytest
+
+pytestmark = pytest.mark.posix_only
+
+if os.name == "nt":
+    pytest.skip("POSIX-only test; requires PTY/tmux/pexpect", allow_module_level=True)
+
 
 import asyncio
 import contextlib

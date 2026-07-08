@@ -9,26 +9,31 @@ configuration in issues, tests, examples, or logs.
 ## Development setup
 
 This is a Python package with an optional frontend under `web/`. Use
-[`uv`](https://docs.astral.sh/uv/) for local development:
+[`uv`](https://docs.astral.sh/uv/) for local development.
 
-**Supported dev OS: macOS or Linux.** Native Windows is not supported for
-development — some test dependencies are POSIX-only (`pexpect`/`pyte` are
-excluded on Windows), a few modules import POSIX stdlib or call `os.getuid()`
-at import time, and the `pre-commit` hooks assume the Unix `.venv/bin/` layout,
-so `pytest` and `pre-commit` cannot pass natively. On Windows, use
-**WSL2 (Ubuntu)** and clone into the **Linux** filesystem (`~/…`, not `/mnt/c`);
-this matches CI. Git Bash is not sufficient — it runs native-Windows Python.
+**Supported dev OS:** macOS, Linux, and native Windows for core/server/web
+workflows. POSIX terminal-wrapper coverage is still Linux/macOS/WSL-only:
+`pexpect`, `pyte`, raw PTY, tmux control-mode, `termios`, `fcntl`, Unix signals,
+and fork-specific tests are marked `posix_only` and intentionally skipped on
+native Windows. On Windows, use WSL2 when you need that POSIX coverage; use
+native PowerShell/Windows Terminal when you are working on core package, server,
+web UI, SDK-harness, Job Object, or psmux-backed terminal code.
 
 Install local prerequisites first:
 
 - [`uv`](https://docs.astral.sh/uv/getting-started/installation/) for Python
   environments and dependency management.
-- `tmux`, required for native Claude/Codex terminals launched by the local host
+- `tmux`, required on Linux/macOS for POSIX native terminal-wrapper tests
   (`brew install tmux` on macOS, or `apt install tmux` on Debian/Ubuntu).
-- `bubblewrap` (`bwrap`), **Linux only**, used to OS-sandbox those native
-  Claude/Codex/Pi terminals (`apt install bubblewrap` on Debian/Ubuntu). macOS
-  uses the built-in `seatbelt` sandbox and needs nothing extra.
+- `psmux`, required on native Windows for Omnigent-managed interactive
+  terminals.
+- `bubblewrap` (`bwrap`), **Linux only**, used to OS-sandbox native
+  terminals (`apt install bubblewrap` on Debian/Ubuntu). macOS uses the
+  built-in `seatbelt` sandbox and needs nothing extra; Windows uses Job Object
+  process containment, not filesystem/network isolation parity.
 - Node.js 22 LTS or newer with `npm` when working on `web/`.
+
+POSIX shell setup:
 
 ```bash
 git clone https://github.com/omnigent-ai/omnigent.git
@@ -40,11 +45,31 @@ uv sync --extra all --extra dev
 source .venv/bin/activate    # or prefix commands with `uv run`
 ```
 
+Native Windows PowerShell setup:
+
+```powershell
+git clone https://github.com/omnigent-ai/omnigent.git
+cd omnigent
+
+uv python install
+uv venv --python (Get-Content .python-version)
+uv sync --extra all --extra dev
+```
+
 Common checks:
 
 ```bash
-uv run pytest                      # Python tests (e2e/live skipped by default)
+uv run pytest                      # full POSIX suite on Linux/macOS/WSL
 uv run ruff check . && uv run ruff format --check .
+uv run pre-commit run --all-files
+```
+
+Native Windows supported subset:
+
+```powershell
+uv run pytest -m "not posix_only"
+uv run ruff check .
+uv run ruff format --check .
 uv run pre-commit run --all-files
 ```
 
