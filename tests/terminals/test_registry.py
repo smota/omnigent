@@ -24,9 +24,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from omnigent.inner.terminal import TerminalCreateResult, TerminalInstance
+from omnigent.inner.terminal import TerminalInstance
 from omnigent.terminals import TerminalRegistry
-from omnigent.terminals import registry as registry_mod
 from omnigent.terminals.registry import TerminalListEntry, conversation_link_for_id
 
 # ── Pure bookkeeping (no tmux) ────────────────────────────────
@@ -159,10 +158,7 @@ async def test_shutdown_on_empty_registry_is_noop() -> None:
     assert reg.active_conversation_ids() == []
 
 
-async def test_launch_replaces_stale_running_entry(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_launch_replaces_stale_running_entry(tmp_path: Path) -> None:
     """``launch`` verifies a cached running entry before returning it."""
 
     class _FlagTerminal(TerminalInstance):
@@ -184,7 +180,14 @@ async def test_launch_replaces_stale_running_entry(
             self.closed = True
             self.running = False
 
-    reg = TerminalRegistry()
+    class _FakeBackend:
+        @property
+        def name(self) -> str:
+            return "fake"
+
+        def create(self, *_args: object, **_kwargs: object) -> tuple[TerminalInstance, Path]:
+            return created, tmp_path
+
     stale = _FlagTerminal(
         name="shell",
         session_key="s1",
@@ -200,13 +203,9 @@ async def test_launch_replaces_stale_running_entry(
         private_dir=tmp_path / "created",
         running=False,
     )
+    reg = TerminalRegistry(backend=_FakeBackend())
     reg._by_conversation["conv_x"] = {("shell", "s1"): stale}
     reg._instance_locks[("conv_x", "shell", "s1")] = threading.Lock()
-
-    def _fake_create_terminal_instance(*_args: object, **_kwargs: object) -> TerminalCreateResult:
-        return TerminalCreateResult(instance=created, cwd=tmp_path)
-
-    monkeypatch.setattr(registry_mod, "create_terminal_instance", _fake_create_terminal_instance)
 
     result = await reg.launch(
         "conv_x",
