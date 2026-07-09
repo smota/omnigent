@@ -53,17 +53,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --extra dev
 
-      - name: Import + CLI smoke
-        run: |
-          uv run python -c "import omnigent; print('import omnigent OK')"
-          uv run omnigent --help
-
-      - name: Windows-support unit tests (hard)
-        run: >-
-          uv run pytest
-          tests/inner/test_proc_and_platform.py
-          tests/runtime/test_process_manager.py
-          -p no:cacheprovider -q
+      - name: Windows stable subset (hard)
+        shell: pwsh
+        run: .\scripts\windows_safe_pytest.ps1 -StableOnly
 
       - name: Install psmux
         shell: pwsh
@@ -77,6 +69,7 @@ jobs:
         run: >-
           uv run pytest
           tests/terminals/test_registry.py::test_windows_psmux_backend_launch_send_read_close
+          tests/terminals/test_registry.py::test_windows_psmux_backend_strips_runner_auth_secrets
           -p no:cacheprovider -q
 
       - name: Broader unit sweep (non-blocking)

@@ -51,9 +51,17 @@ or screenshots showing:
    ```
 
 3. Detach/reconnect behavior where the terminal session remains alive.
-4. Ended/dead-session behavior where the browser stops reconnecting.
+4. Ended/dead-session behavior where the browser stops treating the terminal as
+   connected.
 5. ANSI/cursor/TUI behavior that demonstrates either the current limitation or a
    future parity improvement.
+
+A gated evidence capture test lives at
+`tests/e2e_ui/windows/test_psmux_terminal_evidence.py`. Run it manually with
+`OMNIGENT_WINDOWS_EVIDENCE=1`; it writes screenshots under
+`.pi/evidence/windows-parity/` for attach, reconnect, ANSI limitation, and ended
+session states. Checked-in evidence for a specific branch belongs under
+`docs/windows/evidence/`.
 
 ## Path to parity
 

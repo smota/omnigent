@@ -8,7 +8,7 @@ the broader QA matrix by separating broad collection from stable execution.
 From native Windows PowerShell:
 
 ```powershell
-uv sync --extra all --extra dev
+uv sync --locked --extra dev
 .\scripts\windows_safe_pytest.ps1
 ```
 

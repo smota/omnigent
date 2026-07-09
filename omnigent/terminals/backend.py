@@ -17,6 +17,7 @@ from typing import Protocol
 from omnigent._platform import IS_WINDOWS
 from omnigent.inner.datamodel import OSEnvSpec, TerminalEnvSpec
 from omnigent.inner.terminal import TerminalInstance, create_terminal_instance
+from omnigent.runner.identity import strip_runner_auth_secrets
 
 
 class TerminalMuxBackend(Protocol):
@@ -65,6 +66,7 @@ class PsmuxTerminalInstance(TerminalInstance):
         env.update(self.env)
         for key in self.env_unset:
             env.pop(key, None)
+        env = strip_runner_auth_secrets(env)
 
         proc = await asyncio.create_subprocess_exec(
             *self._tmux_base_cmd(),

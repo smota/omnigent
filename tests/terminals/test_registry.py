@@ -885,6 +885,54 @@ async def test_windows_psmux_backend_launch_send_read_close(tmp_path: Path) -> N
         await reg.shutdown()
 
 
+@pytest.mark.skipif(shutil.which("psmux") is None, reason="psmux not installed")
+@pytest.mark.windows_only
+async def test_windows_psmux_backend_strips_runner_auth_secrets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """psmux-launched shells must not inherit runner control-plane tokens."""
+    from omnigent.runner.identity import RUNNER_AUTH_SECRET_ENV_VARS
+    from omnigent.terminals.backend import PsmuxTerminalMuxBackend
+
+    output_path = tmp_path / "runner-auth-env.txt"
+    secret_env = {name: f"leaked-{name}" for name in RUNNER_AUTH_SECRET_ENV_VARS}
+    for name, value in secret_env.items():
+        monkeypatch.setenv(name, value)
+    quoted_names = ",".join(f"'{name}'" for name in sorted(RUNNER_AUTH_SECRET_ENV_VARS))
+    quoted_output = str(output_path).replace("'", "''")
+    command = (
+        f"foreach ($name in @({quoted_names})) {{ "
+        "$value = [Environment]::GetEnvironmentVariable($name); "
+        "if ($null -eq $value) { $value = '' }; "
+        f"Add-Content -LiteralPath '{quoted_output}' -Value \"$name=$value\" "
+        "}; Write-Output ready; Start-Sleep -Seconds 30"
+    )
+    reg = TerminalRegistry(backend=PsmuxTerminalMuxBackend())
+    spec = TerminalEnvSpec(
+        command="powershell.exe",
+        args=["-NoProfile", "-Command", command],
+        env=dict(secret_env),
+        os_env=OSEnvSpec(
+            type="caller_process",
+            cwd=str(tmp_path),
+            sandbox=OSEnvSandboxSpec(type="none"),
+        ),
+    )
+
+    try:
+        await reg.launch("conv_psmux_secret", "shell", "s1", spec)
+        for _ in range(50):
+            if output_path.exists():
+                break
+            await asyncio.sleep(0.1)
+        assert output_path.exists()
+        lines = output_path.read_text().splitlines()
+        assert lines == [f"{name}=" for name in sorted(RUNNER_AUTH_SECRET_ENV_VARS)]
+    finally:
+        await reg.shutdown()
+
+
 async def test_capture_bridge_streams_read_and_forwards_input() -> None:
     """Capture bridge streams snapshots and sends websocket input to backend."""
     from omnigent.terminals.ws_bridge import bridge_capture_to_websocket
@@ -939,7 +987,8 @@ async def test_capture_bridge_streams_read_and_forwards_input() -> None:
 
     from omnigent.terminals.ws_bridge import WS_CLOSE_TERMINAL_DETACHED
 
-    assert b"ready" in ws.sent_bytes
+    assert ws.sent_bytes[0].startswith(b"\x1b[H\x1b[2J")
+    assert b"ready" in ws.sent_bytes[0]
     assert ("echo hi", "Enter") in instance.sent
     assert (100, 40) in instance.resizes
     assert ws.closed is True

@@ -536,7 +536,8 @@ async def bridge_capture_to_websocket(
             screen = read.get("screen", "") if isinstance(read, dict) else ""
             if screen != last_screen:
                 last_screen = screen
-                await websocket.send_bytes(screen.encode("utf-8", errors="replace"))
+                snapshot = "\x1b[H\x1b[2J" + screen
+                await websocket.send_bytes(snapshot.encode("utf-8", errors="replace"))
             await asyncio.sleep(poll_interval_s)
         close_code = WS_CLOSE_TERMINAL_NOT_FOUND
         close_reason = "terminal session ended"

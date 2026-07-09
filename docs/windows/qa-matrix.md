@@ -24,9 +24,7 @@ $env:UV_INDEX_URL = "https://pypi.org/simple"
 $env:PIP_INDEX_URL = "https://pypi.org/simple"
 
 uv sync --locked --extra dev
-uv run python -c "import omnigent; print('import omnigent OK')"
-uv run omnigent --help
-uv run pytest tests/inner/test_proc_and_platform.py tests/runtime/test_process_manager.py -p no:cacheprovider -q
+.\scripts\windows_safe_pytest.ps1 -StableOnly
 uv run pytest tests/terminals/test_registry.py::test_windows_psmux_backend_launch_send_read_close -p no:cacheprovider -q
 uv run pytest -m "not posix_only" -p no:cacheprovider -q
 ```

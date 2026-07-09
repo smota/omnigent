@@ -4,46 +4,83 @@ Collected on native Windows for the bounded Windows first-class support ADR.
 
 ## Environment
 
-See [`environment-inventory.txt`](environment-inventory.txt).
+See [`environment-inventory.txt`](environment-inventory.txt). The inventory records
+tool locations and versions for the machine used to collect the checked-in
+browser evidence.
 
 ## Browser psmux terminal attach
 
-Evidence was collected by running the existing browser E2E fixture flow on native
-Windows with Chromium headed mode and the psmux terminal backend installed.
+Evidence was collected from the real Omnigent web UI on native Windows with
+Chromium headed mode and the psmux terminal backend installed. The checked-in
+screenshots demonstrate the documented capture/send browser attach path; they do
+not claim POSIX tmux PTY/control-mode parity.
 
-Command used:
+Checked-in artifacts:
 
-```powershell
-$env:PATH="C:\Users\samue\AppData\Local\hermes\node;" + $env:PATH
-uv run pytest tests/e2e_ui/test_windows_terminal_evidence_tmp.py::test_windows_psmux_browser_evidence -q --headed --browser chromium --ui-skip-build
-```
-
-The temporary evidence test used the same `terminal_session` fixture and web UI
-flow as `tests/e2e_ui/shells/test_new_shell.py`: open the Shells rail, create a
-new shell, wait for `data-state="connected"`, type a nonce command into xterm,
-verify the bridge stays connected, and capture screenshots.
-
-Artifacts:
-
-- [`browser-psmux-terminal-attach.png`](browser-psmux-terminal-attach.png) — full-page screenshot of Omnigent web terminal attach with typed nonce command.
+- [`browser-psmux-terminal-attach.png`](browser-psmux-terminal-attach.png) — full-page screenshot of Omnigent web terminal attach with a typed nonce command.
 - [`browser-psmux-terminal-panel.png`](browser-psmux-terminal-panel.png) — focused terminal panel screenshot.
+- [`browser-psmux-terminal-reconnect.png`](browser-psmux-terminal-reconnect.png) — screenshot after detaching from the shell view and reopening the same shell entry.
+- [`browser-psmux-terminal-ansi-limitation.png`](browser-psmux-terminal-ansi-limitation.png) — ANSI/cursor limitation probe through the capture/send bridge.
+- [`browser-psmux-terminal-ended.png`](browser-psmux-terminal-ended.png) — screenshot after sending `exit` to document ended-session behavior.
 
-Nonce typed in the terminal:
+Nonce typed in the terminal during the checked-in capture:
 
 ```text
-omnigent-windows-terminal-ok-20260709
+omnigent-windows-terminal-ok-worker
 ```
 
-Validation output:
+Validation output from the checked-in capture run:
 
 ```text
 Running 1 items in this shard
 .
-1 passed in 18.56s
+1 passed in 23.62s
 ```
 
-## Notes
+## Reproducing or refreshing evidence
 
-The screenshot demonstrates browser attach and input delivery for the documented
-capture/send bridge. It does not claim POSIX tmux PTY/control fidelity parity;
-that limitation remains documented in `../psmux-browser-attach.md`.
+A gated evidence test is committed at
+`tests/e2e_ui/windows/test_psmux_terminal_evidence.py`. It is skipped unless
+explicitly enabled so ordinary browser E2E runs do not update evidence files.
+
+From native Windows PowerShell after building the web UI once:
+
+```powershell
+$env:OMNIGENT_WINDOWS_EVIDENCE = "1"
+$env:OMNIGENT_WINDOWS_EVIDENCE_NONCE = "omnigent-windows-terminal-ok-$(Get-Date -Format yyyyMMddHHmmss)"
+uv run pytest tests/e2e_ui/windows/test_psmux_terminal_evidence.py::test_windows_psmux_browser_evidence -q --headed --browser chromium --ui-skip-build
+```
+
+The test uses the same `terminal_session` fixture and Shells rail flow as
+`tests/e2e_ui/shells/test_new_shell.py`: open the Shells rail, create a
+psmux-backed shell, wait for `data-state="connected"`, type the nonce into xterm,
+verify the bridge stays connected, detach from the shell view, reconnect to the
+same shell entry, type an ANSI color/cursor limitation probe, and capture an
+ended-session screenshot after `exit`.
+
+The run writes artifacts under `.pi/evidence/windows-parity/`:
+
+- `browser-psmux-terminal-attach.png`
+- `browser-psmux-terminal-panel.png`
+- `browser-psmux-terminal-reconnect.png`
+- `browser-psmux-terminal-ansi-limitation.png`
+- `browser-psmux-terminal-ended.png`
+
+## Manual reviewer checklist
+
+When collecting final PR evidence, confirm and attach artifacts for:
+
+1. browser attach to an Omnigent-managed psmux terminal;
+2. a live typed nonce and visible command/output round trip;
+3. detach/reconnect to the same psmux session;
+4. ended/dead-session behavior where the browser stops treating the terminal as
+   connected;
+5. ANSI/cursor/TUI behavior showing the current capture/send fidelity ceiling.
+
+## Limitations
+
+The current psmux browser attach path is a capture/send bridge. Xterm renders to
+a canvas, and the psmux `read()` snapshots can make fast redraw or ANSI/cursor
+behavior difficult to present as clean DOM text. Treat these screenshots as
+review evidence for the bounded Windows browser attach behavior only, not as a
+claim of POSIX terminal fidelity parity.
