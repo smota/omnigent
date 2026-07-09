@@ -65,6 +65,20 @@ jobs:
           tests/runtime/test_process_manager.py
           -p no:cacheprovider -q
 
+      - name: Install psmux
+        shell: pwsh
+        run: |
+          winget install --id marlocarlo.psmux -e --accept-package-agreements --accept-source-agreements
+          "$env:LOCALAPPDATA\Microsoft\WinGet\Links" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $env:PATH = "$env:LOCALAPPDATA\Microsoft\WinGet\Links;$env:PATH"
+          psmux --version
+
+      - name: psmux terminal backend test (hard)
+        run: >-
+          uv run pytest
+          tests/terminals/test_registry.py::test_windows_psmux_backend_launch_send_read_close
+          -p no:cacheprovider -q
+
       - name: Broader unit sweep (non-blocking)
         continue-on-error: true
         run: >-
