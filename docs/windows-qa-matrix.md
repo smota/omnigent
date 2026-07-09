@@ -8,7 +8,7 @@ so contributors know which evidence belongs in each PR.
 
 | Level | Signal | Required for merge? | Purpose |
 | --- | --- | --- | --- |
-| Hard CI | `Windows smoke + unit` import/CLI smoke and Windows-support unit tests | Yes | Catch native Windows regressions in cross-platform primitives. |
+| Hard CI | `Windows smoke + unit` import/CLI smoke, Windows-support unit tests, and the psmux terminal backend lifecycle test | Yes | Catch native Windows regressions in cross-platform primitives and the native terminal backend. |
 | Non-blocking CI | Broader `-m "not posix_only"` sweep in `.github/workflows/windows.yml` | No | Surface the next Windows parity gaps without blocking unrelated work. |
 | Manual QA | PowerShell transcript and screenshots/recordings where visual | Yes for Windows feature PRs | Prove native Windows behavior that CI cannot exercise reliably yet. |
 | POSIX parity | Linux/macOS/WSL full test coverage | Yes through existing CI | Keep Unix terminal/sandbox behavior unchanged. |
@@ -27,12 +27,15 @@ uv sync --locked --extra dev
 uv run python -c "import omnigent; print('import omnigent OK')"
 uv run omnigent --help
 uv run pytest tests/inner/test_proc_and_platform.py tests/runtime/test_process_manager.py -p no:cacheprovider -q
+uv run pytest tests/terminals/test_registry.py::test_windows_psmux_backend_launch_send_read_close -p no:cacheprovider -q
 uv run pytest -m "not posix_only" -p no:cacheprovider -q
 ```
 
-The broad sweep may remain non-blocking while native bridge imports and terminal
-coverage are being made Windows-safe. A PR that expands Windows support should
-include the broad sweep output and explicitly call out any remaining failures.
+The dedicated psmux lifecycle test is hard CI because native terminal support
+requires a real Windows multiplexer signal. The broad sweep may remain
+non-blocking while native bridge imports and remaining terminal coverage are
+being made Windows-safe. A PR that expands Windows support should include the
+broad sweep output and explicitly call out any remaining failures.
 
 ## POSIX-only coverage
 
