@@ -35,12 +35,13 @@ or terminal behavior that needs separate stabilization.
 
 The initial stable subset includes:
 
-- native process/platform support
-- process manager behavior
-
-As the current Windows PR stack lands, extend the stable subset with runner
-transport selection/routing, sandbox capability metadata, and parser/validator
-fail-closed behavior for unsupported Windows network-deny policy.
+- native process/platform support;
+- process manager behavior;
+- runner transport selection/routing;
+- sandbox capability metadata;
+- parser/validator fail-closed behavior for unsupported Windows network-deny and
+  egress policy;
+- PowerShell installer helper behavior.
 
 ## Promotion rule
 

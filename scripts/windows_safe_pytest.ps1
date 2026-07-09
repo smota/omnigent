@@ -47,6 +47,14 @@ Invoke-Step "stable Windows unit subset" @(
     'uv', 'run', 'pytest',
     'tests/inner/test_proc_and_platform.py',
     'tests/runtime/test_process_manager.py',
+    'tests/runner/test_routing.py',
+    'tests/server/test_runner_transport.py',
+    'tests/inner/test_sandbox_capabilities.py',
+    'tests/spec/test_parser.py::test_parse_windows_jobobject_rejects_network_deny',
+    'tests/spec/test_parser.py::test_parse_windows_jobobject_rejects_egress_rules',
+    'tests/spec/test_validator.py::test_os_env_windows_jobobject_rejects_network_deny',
+    'tests/spec/test_validator.py::test_os_env_windows_jobobject_rejects_egress_rules',
+    'tests/scripts/test_install_oss_ps1.py',
     '-p', 'no:cacheprovider', '-q'
 )
 
