@@ -73,16 +73,17 @@ _CAPABILITIES: dict[str, SandboxCapabilities] = {
 }
 
 
-def sandbox_capabilities(backend: str) -> SandboxCapabilities:
+def sandbox_capabilities(backend: str | None) -> SandboxCapabilities:
     """Return capability metadata for *backend*.
 
-    Unknown backends are treated as unsupported/no-isolation so policy callers
-    can fail closed instead of assuming a secure default.
+    Unknown or unset backends are treated as unsupported/no-isolation so policy
+    callers can fail closed instead of assuming a secure default.
     """
+    name = backend or "none"
     return _CAPABILITIES.get(
-        backend,
+        name,
         SandboxCapabilities(
-            backend=backend,
+            backend=name,
             platform="unknown",
             process_containment=False,
             filesystem_isolation=False,
@@ -90,6 +91,68 @@ def sandbox_capabilities(backend: str) -> SandboxCapabilities:
             egress_policy=False,
             notes="unknown sandbox backend; no capabilities advertised",
         ),
+    )
+
+
+def egress_capable_backends() -> frozenset[str]:
+    """Return backends that hard-enforce Omnigent egress policy."""
+    return frozenset(
+        backend for backend, caps in _CAPABILITIES.items() if caps.egress_policy
+    )
+
+
+def network_isolation_capable_backends() -> frozenset[str]:
+    """Return backends that can hard-deny/isolate network access."""
+    return frozenset(
+        backend for backend, caps in _CAPABILITIES.items() if caps.network_isolation
+    )
+
+
+def sandbox_network_deny_error(backend: str | None) -> str | None:
+    """Return the fail-closed error for unsupported network deny, if any."""
+    caps = sandbox_capabilities(backend)
+    if caps.network_isolation:
+        return None
+    if caps.backend == "windows_jobobject":
+        return (
+            "os_env.sandbox.allow_network=false is not supported with "
+            "sandbox.type=windows_jobobject: Windows Job Objects contain "
+            "process trees but do not hard-enforce network denial. Use a "
+            "Linux/macOS hardened sandbox for network isolation or set "
+            "allow_network=true on Windows."
+        )
+    return (
+        "os_env.sandbox.allow_network=false requires a sandbox backend that "
+        "hard-enforces network denial. "
+        f"Got sandbox.type={caps.backend!r}."
+    )
+
+
+def sandbox_egress_policy_error(backend: str | None) -> str | None:
+    """Return the fail-closed error for unsupported egress policy, if any."""
+    caps = sandbox_capabilities(backend)
+    if caps.egress_policy:
+        return None
+    capable = ", ".join(sorted(egress_capable_backends()))
+    return (
+        "os_env.sandbox.egress_rules requires sandbox.type="
+        f"{capable} for hard enforcement of the network allow-list. "
+        f"Got sandbox.type={caps.backend!r}; the rules would be inert "
+        "decoration on the policy and the agent would have unrestricted "
+        "network access despite the YAML declaring otherwise."
+    )
+
+
+def sandbox_credential_proxy_error(backend: str | None) -> str | None:
+    """Return the fail-closed error for unsupported credential proxy, if any."""
+    caps = sandbox_capabilities(backend)
+    if caps.egress_policy:
+        return None
+    capable = ", ".join(sorted(egress_capable_backends()))
+    return (
+        "os_env.sandbox.credential_proxy requires sandbox.type="
+        f"{capable} so credentials are bound to a hardened helper boundary. "
+        f"Got sandbox.type={caps.backend!r}."
     )
 
 
@@ -108,5 +171,10 @@ def default_sandbox_backend_for_platform(platform: str | None = None) -> str:
 __all__ = [
     "SandboxCapabilities",
     "default_sandbox_backend_for_platform",
+    "egress_capable_backends",
+    "network_isolation_capable_backends",
     "sandbox_capabilities",
+    "sandbox_credential_proxy_error",
+    "sandbox_egress_policy_error",
+    "sandbox_network_deny_error",
 ]

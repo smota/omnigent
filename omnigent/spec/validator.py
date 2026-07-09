@@ -5,6 +5,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from omnigent.inner.sandbox_capabilities import (
+    sandbox_egress_policy_error,
+    sandbox_network_deny_error,
+)
 from omnigent.spec.types import AgentSpec, ToolRuntime
 
 _SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9-]+$")
@@ -470,13 +474,6 @@ def _validate_compaction(spec: AgentSpec, result: ValidationResult) -> None:
         )
 
 
-# Set of sandbox backends that hard-enforce network isolation
-# (and therefore can host an L7 egress proxy). Mirrors the parser's
-# allow-list. ``none`` and ``windows_jobobject`` are excluded: neither
-# can enforce network deny/egress policy.
-_EGRESS_CAPABLE_BACKENDS = frozenset({"linux_bwrap", "darwin_seatbelt"})
-
-
 def _validate_os_env(spec: AgentSpec, result: ValidationResult) -> None:
     """
     Validate the agent's ``os_env`` block, focused on sandbox combos
@@ -533,26 +530,15 @@ def _validate_os_env(spec: AgentSpec, result: ValidationResult) -> None:
             "sandbox.type=none does not create a scratch tmpdir",
         )
 
-    if sandbox_type == "windows_jobobject" and not allow_network:
-        result.add(
-            "os_env.sandbox.allow_network",
-            "os_env.sandbox.allow_network=false is not supported with "
-            "sandbox.type=windows_jobobject: Windows Job Objects contain "
-            "process trees but do not hard-enforce network denial. Use a "
-            "Linux/macOS hardened sandbox for network isolation or set "
-            "allow_network=true on Windows.",
-        )
+    if not allow_network:
+        network_error = sandbox_network_deny_error(sandbox_type)
+        if network_error is not None:
+            result.add("os_env.sandbox.allow_network", network_error)
 
-    if egress_rules and sandbox_type not in _EGRESS_CAPABLE_BACKENDS:
-        result.add(
-            "os_env.sandbox.egress_rules",
-            "os_env.sandbox.egress_rules requires sandbox.type=linux_bwrap "
-            "(Linux) or sandbox.type=darwin_seatbelt (macOS) for hard "
-            "enforcement of the network allow-list. "
-            f"Got sandbox.type={sandbox_type!r}; the rules would be "
-            "inert decoration on the policy and the agent would have "
-            "unrestricted network access despite the YAML declaring otherwise.",
-        )
+    if egress_rules:
+        egress_error = sandbox_egress_policy_error(sandbox_type)
+        if egress_error is not None:
+            result.add("os_env.sandbox.egress_rules", egress_error)
 
 
 def _validate_agent_names(

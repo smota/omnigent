@@ -22,6 +22,11 @@ from omnigent.inner.datamodel import (
     OSEnvSpec,
     TerminalEnvSpec,
 )
+from omnigent.inner.sandbox_capabilities import (
+    sandbox_credential_proxy_error,
+    sandbox_egress_policy_error,
+    sandbox_network_deny_error,
+)
 from omnigent.spec.types import (
     DEFAULT_ASK_TIMEOUT,
     AgentSpec,
@@ -828,33 +833,19 @@ def _parse_os_env_sandbox(
         sandbox_type = _default_sandbox_for_platform().type
     else:
         sandbox_type = str(raw_type)
-    if sandbox_type == "windows_jobobject" and not allow_network:
-        raise OmnigentError(
-            "os_env.sandbox.allow_network=false is not supported with "
-            "sandbox.type=windows_jobobject: Windows Job Objects contain "
-            "process trees but do not hard-enforce network denial. Use a "
-            "Linux/macOS hardened sandbox for network isolation or set "
-            "allow_network=true on Windows.",
-            code=ErrorCode.INVALID_INPUT,
-        )
-    if egress_rules and sandbox_type not in ("linux_bwrap", "darwin_seatbelt"):
-        raise OmnigentError(
-            "os_env.sandbox.egress_rules requires sandbox.type=linux_bwrap "
-            "(Linux) or sandbox.type=darwin_seatbelt (macOS) for hard "
-            "network enforcement: those backends restrict network access "
-            "at spawn time so the MITM proxy is the only egress path. "
-            f"Got sandbox.type={sandbox_type!r}.",
-            code=ErrorCode.INVALID_INPUT,
-        )
+    if not allow_network:
+        network_error = sandbox_network_deny_error(sandbox_type)
+        if network_error is not None:
+            raise OmnigentError(network_error, code=ErrorCode.INVALID_INPUT)
+    if egress_rules:
+        egress_error = sandbox_egress_policy_error(sandbox_type)
+        if egress_error is not None:
+            raise OmnigentError(egress_error, code=ErrorCode.INVALID_INPUT)
     credential_proxy = _parse_credential_proxy(raw.get("credential_proxy"))
-    if credential_proxy is not None and sandbox_type not in ("linux_bwrap", "darwin_seatbelt"):
-        raise OmnigentError(
-            "os_env.sandbox.credential_proxy requires sandbox.type=linux_bwrap "
-            "(Linux) or sandbox.type=darwin_seatbelt (macOS) so credentials are "
-            "bound to a hardened helper boundary. "
-            f"Got sandbox.type={sandbox_type!r}.",
-            code=ErrorCode.INVALID_INPUT,
-        )
+    if credential_proxy is not None:
+        credential_error = sandbox_credential_proxy_error(sandbox_type)
+        if credential_error is not None:
+            raise OmnigentError(credential_error, code=ErrorCode.INVALID_INPUT)
     if credential_proxy is not None and not egress_rules:
         raise OmnigentError(
             "os_env.sandbox.credential_proxy requires os_env.sandbox.egress_rules: "

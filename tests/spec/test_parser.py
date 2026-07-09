@@ -3503,3 +3503,22 @@ def test_parse_windows_jobobject_rejects_network_deny(tmp_path: Path) -> None:
 
     with pytest.raises(OmnigentError, match=r"windows_jobobject"):
         parse(tmp_path)
+
+
+def test_parse_windows_jobobject_rejects_egress_rules(tmp_path: Path) -> None:
+    """Parser uses shared capabilities for Windows egress fail-closed policy."""
+    config = {
+        "spec_version": 1,
+        "name": "windows-egress-rules",
+        "os_env": {
+            "type": "caller_process",
+            "sandbox": {
+                "type": "windows_jobobject",
+                "egress_rules": ["* api.github.com/**"],
+            },
+        },
+    }
+    (tmp_path / "config.yaml").write_text(yaml.dump(config))
+
+    with pytest.raises(OmnigentError, match=r"windows_jobobject"):
+        parse(tmp_path)

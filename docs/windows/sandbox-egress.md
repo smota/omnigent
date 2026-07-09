@@ -6,6 +6,10 @@ not equivalent to the hardened POSIX sandboxes.
 
 ## Capability matrix
 
+The source of truth for this matrix is `omnigent/inner/sandbox_capabilities.py`.
+Parser and validator checks consume the same capability metadata so unsupported
+Windows policy combinations fail closed consistently.
+
 | Backend | Platform | Process containment | Filesystem isolation | Network isolation | Egress rules |
 | --- | --- | --- | --- | --- | --- |
 | `linux_bwrap` | Linux | Yes | Yes | Yes | Yes |
@@ -33,6 +37,6 @@ Therefore Windows support must stay explicit:
 
 1. Advertise capabilities through code metadata.
 2. Document the support boundary for reviewers and contributors.
-3. Add fail-closed validation for unsupported Windows sandbox/egress policy
-   combinations.
+3. Keep parser and validator fail-closed checks wired to the shared capability
+   model.
 4. Only promote Windows CI once those errors are deterministic.
