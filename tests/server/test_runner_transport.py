@@ -59,3 +59,60 @@ def test_build_uds_runner_ws_factory_uses_unix_connect(
         "terminal_bash_s1/attach?read_only=false"
     )
     assert captured["kwargs"].get("open_timeout") == 10
+
+
+def test_build_tcp_runner_returns_tcp_client() -> None:
+    """The TCP client targets the configured loopback runner URL."""
+    client, _factory = rt.build_tcp_runner("http://127.0.0.1:9876")
+    try:
+        assert client.base_url == httpx.URL("http://127.0.0.1:9876")
+    finally:
+        client._transport.__dict__.clear()
+
+
+def test_build_tcp_runner_ws_factory_uses_websocket_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The TCP WS factory maps http(s) base URLs to ws(s) attach URLs."""
+    captured: dict[str, Any] = {}
+
+    def fake_connect(uri: str, **kwargs: Any) -> Any:
+        captured["uri"] = uri
+        captured["kwargs"] = kwargs
+        return "FAKE_TCP_CM"
+
+    monkeypatch.setattr("websockets.asyncio.client.connect", fake_connect)
+
+    _client, factory = rt.build_tcp_runner("https://runner.example/base")
+    result = factory("/v1/sessions/conv_abc/resources/terminals/t1/attach?read_only=false")
+
+    assert result == "FAKE_TCP_CM"
+    assert captured["uri"] == (
+        "wss://runner.example/base/v1/sessions/conv_abc/resources/terminals/"
+        "t1/attach?read_only=false"
+    )
+    assert captured["kwargs"].get("open_timeout") == 10
+
+
+def test_build_runner_transport_prefers_tcp_over_uds(tmp_path: Any) -> None:
+    """A configured TCP URL wins over UDS and works on every platform."""
+    client, _factory = rt.build_runner_transport(
+        uds_path=str(tmp_path / "runner.sock"),
+        tcp_base_url="http://127.0.0.1:9999",
+    )
+    try:
+        assert client.base_url == httpx.URL("http://127.0.0.1:9999")
+    finally:
+        client._transport.__dict__.clear()
+
+
+def test_build_runner_transport_rejects_windows_uds(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Native Windows gets an actionable TCP fallback hint for UDS-only config."""
+    monkeypatch.setattr(rt.os, "name", "nt")
+
+    with pytest.raises(RuntimeError, match="TCP runner base URL"):
+        rt.build_runner_transport(uds_path="runner.sock")
+
+
+def test_build_runner_transport_requires_a_transport() -> None:
+    """Missing transport config fails loud instead of guessing."""
+    with pytest.raises(RuntimeError, match="provide tcp_base_url or uds_path"):
+        rt.build_runner_transport()
