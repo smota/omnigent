@@ -9,7 +9,7 @@ From native Windows PowerShell:
 
 ```powershell
 uv sync --locked --extra dev
-.\scripts\windows_safe_pytest.ps1
+.\scripts\windows_safe_pytest.ps1 -StableOnly
 ```
 
 Collection-only check:
@@ -27,9 +27,10 @@ Stable subset only, without broad collection:
 ## Why collection and execution are separate
 
 `pytest -m "not posix_only" --collect-only` catches import-time Windows
-regressions across the broad Windows-safe surface. Full execution is promoted in
-smaller groups because many tests exercise services, local environment state,
-or terminal behavior that needs separate stabilization.
+regressions across the broad Windows-safe surface and remains non-blocking.
+Full execution is promoted in smaller groups because many tests exercise
+services, local environment state, or terminal behavior that needs separate
+stabilization.
 
 ## Current stable subset
 

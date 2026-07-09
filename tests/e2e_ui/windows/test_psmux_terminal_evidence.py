@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from pathlib import Path
+from urllib.parse import quote
 
 import pytest
 from playwright.sync_api import Page, expect
+from websockets.sync.client import connect
 
 from tests.e2e_ui.conftest import open_right_rail
 
@@ -22,6 +25,56 @@ pytestmark = pytest.mark.skipif(
 )
 
 _USER_ZSH_KEY_RE = re.compile(r"^terminal:terminal_zsh_u-")
+
+
+def _bash_quote(value: str) -> str:
+    """Single-quote a value for the Git-bash-style evidence shell."""
+    return "'" + value.replace("'", "'\"'\"'") + "'"
+
+
+def _capture_terminal_transcript(
+    *,
+    base_url: str,
+    session_id: str,
+    terminal_id: str,
+    output_path: Path,
+    commands: list[str],
+    expected: list[str],
+) -> None:
+    """Drive the terminal attach API and persist raw snapshot transcript."""
+    ws_base = base_url.replace("http://", "ws://", 1).replace("https://", "wss://", 1)
+    url = (
+        f"{ws_base}/v1/sessions/{quote(session_id, safe='')}/resources/terminals/"
+        f"{quote(terminal_id, safe='')}/attach"
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    transcript = (
+        output_path.read_text(encoding="utf-8", errors="replace")
+        if output_path.exists()
+        else ""
+    )
+    transcript += "\n--- attach command batch ---\n"
+    with connect(url, max_size=20_000_000) as ws:
+        for command in commands:
+            ws.send(command.encode("utf-8"))
+        if not expected:
+            time.sleep(0.5)
+        deadline = time.monotonic() + 15.0
+        while expected and time.monotonic() < deadline and not all(
+            item in transcript for item in expected
+        ):
+            try:
+                message = ws.recv(timeout=0.75)
+            except TimeoutError:
+                continue
+            if isinstance(message, bytes):
+                transcript += message.decode("utf-8", errors="replace")
+            else:
+                transcript += message
+    output_path.write_text(transcript, encoding="utf-8")
+    missing = [item for item in expected if item not in transcript]
+    if missing:
+        raise AssertionError(f"terminal transcript missing {missing!r}; content={transcript!r}")
 
 
 def _open_shell(page: Page) -> None:
@@ -47,17 +100,24 @@ def test_windows_psmux_browser_evidence(page: Page, terminal_session: tuple[str,
     evidence_dir = Path(".pi/evidence/windows-parity")
     evidence_dir.mkdir(parents=True, exist_ok=True)
     nonce = os.environ.get("OMNIGENT_WINDOWS_EVIDENCE_NONCE", "omnigent-windows-terminal-ok")
+    transcript_path = evidence_dir / "browser-psmux-terminal-transcript.txt"
+    transcript_path.unlink(missing_ok=True)
 
     page.set_viewport_size({"width": 1440, "height": 1000})
     page.goto(f"{base_url}/c/{session_id}")
     _open_shell(page)
     main_terminal, terminal_view = _connected_terminal(page)
 
-    textarea = terminal_view.locator("textarea.xterm-helper-textarea")
-    textarea.focus()
-    page.keyboard.type(f"printf '{nonce}\\n'")
-    page.keyboard.press("Enter")
-    page.wait_for_timeout(1500)
+    terminal_id = terminal_view.get_attribute("data-terminal-id")
+    assert terminal_id is not None
+    _capture_terminal_transcript(
+        base_url=base_url,
+        session_id=session_id,
+        terminal_id=terminal_id,
+        output_path=transcript_path,
+        commands=[f"printf '%s\\n' {_bash_quote(nonce)}\n"],
+        expected=[nonce],
+    )
     expect(terminal_view).to_have_attribute("data-state", "connected")
     page.screenshot(path=str(evidence_dir / "browser-psmux-terminal-attach.png"), full_page=True)
     main_terminal.screenshot(path=str(evidence_dir / "browser-psmux-terminal-panel.png"))
@@ -70,15 +130,24 @@ def test_windows_psmux_browser_evidence(page: Page, terminal_session: tuple[str,
     main_terminal, terminal_view = _connected_terminal(page)
     page.screenshot(path=str(evidence_dir / "browser-psmux-terminal-reconnect.png"), full_page=True)
 
-    textarea = terminal_view.locator("textarea.xterm-helper-textarea")
-    textarea.focus()
-    page.keyboard.type("printf '\\033[31mRED\\033[0m cursor-limit-check\\n'")
-    page.keyboard.press("Enter")
-    page.wait_for_timeout(1500)
+    _capture_terminal_transcript(
+        base_url=base_url,
+        session_id=session_id,
+        terminal_id=terminal_id,
+        output_path=transcript_path,
+        commands=["printf '\\033[31mRED\\033[0m cursor-limit-check\\n'\n"],
+        expected=["cursor-limit-check"],
+    )
     page.screenshot(path=str(evidence_dir / "browser-psmux-terminal-ansi-limitation.png"), full_page=True)
 
-    textarea.focus()
-    page.keyboard.type("exit")
-    page.keyboard.press("Enter")
-    page.wait_for_timeout(2500)
+    _capture_terminal_transcript(
+        base_url=base_url,
+        session_id=session_id,
+        terminal_id=terminal_id,
+        output_path=transcript_path,
+        commands=["exit\n"],
+        expected=[],
+    )
+    expect(terminal_view).to_have_attribute("data-state", "closed", timeout=10_000)
+    expect(terminal_view).to_contain_text("terminal session ended", timeout=10_000)
     page.screenshot(path=str(evidence_dir / "browser-psmux-terminal-ended.png"), full_page=True)

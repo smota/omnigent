@@ -16,7 +16,7 @@ core/server/web workflows. POSIX terminal-wrapper coverage is still
 Linux/macOS/WSL-only: `pexpect`, `pyte`, raw PTY, tmux control-mode,
 `termios`, `fcntl`, Unix signals, and fork-specific tests are marked
 `posix_only` and intentionally skipped on native Windows. Use the
-[Windows QA matrix](docs/windows-qa-matrix.md) to decide which native
+[Windows QA matrix](docs/windows/qa-matrix.md) to decide which native
 PowerShell checks, screenshots, and known-gap notes are required for
 Windows-facing PRs.
 
@@ -68,10 +68,16 @@ uv run pre-commit run --all-files
 Native Windows supported subset:
 
 ```powershell
-uv run pytest -m "not posix_only"
+.\scripts\windows_safe_pytest.ps1 -StableOnly
 uv run ruff check .
 uv run ruff format --check .
 uv run pre-commit run --all-files
+```
+
+For broad non-blocking Windows collection, run:
+
+```powershell
+.\scripts\windows_safe_pytest.ps1 -CollectOnly
 ```
 
 When touching `web/`:

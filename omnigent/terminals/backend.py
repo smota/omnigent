@@ -16,7 +16,11 @@ from typing import Protocol
 
 from omnigent._platform import IS_WINDOWS
 from omnigent.inner.datamodel import OSEnvSpec, TerminalEnvSpec
-from omnigent.inner.terminal import TerminalInstance, create_terminal_instance
+from omnigent.inner.terminal import (
+    TerminalInstance,
+    build_terminal_os_env_spec,
+    create_terminal_instance,
+)
 from omnigent.runner.identity import strip_runner_auth_secrets
 
 
@@ -157,10 +161,15 @@ class PsmuxTerminalMuxBackend:
         sandbox_override: str | None = None,
         conversation_link: str | None = None,
     ) -> tuple[TerminalInstance, Path]:
-        del parent_os_env, sandbox_override, conversation_link
         self.validate_available()
+        effective_os_env = build_terminal_os_env_spec(
+            spec,
+            parent_os_env_spec=parent_os_env,
+            cwd_override=cwd_override,
+            sandbox_override=sandbox_override,
+        )
         private_dir = Path(tempfile.mkdtemp(prefix="omnigent-terminal-"))
-        cwd = Path(cwd_override or (spec.os_env.cwd if spec.os_env else os.getcwd())).resolve()
+        cwd = Path(effective_os_env.cwd or os.getcwd()).resolve()
         instance = PsmuxTerminalInstance(
             name=terminal_name,
             session_key=session_key,
@@ -171,6 +180,7 @@ class PsmuxTerminalMuxBackend:
             env=dict(spec.env),
             env_unset=list(spec.env_unset),
             inherit_env=spec.inherit_env,
+            conversation_link=conversation_link,
             scrollback=spec.scrollback,
             tmux_allow_passthrough=spec.tmux_allow_passthrough,
             tmux_start_on_attach=spec.tmux_start_on_attach,

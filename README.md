@@ -129,8 +129,9 @@ uv tool install -q --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
 <details>
 <summary>Windows (native)</summary>
 
-Omnigent runs natively on Windows in a degraded mode. Use PowerShell or
-Windows Terminal; the POSIX `install_oss.sh` bootstrap is for Linux/macOS.
+Omnigent has bounded native Windows support with documented limitations. Use
+PowerShell or Windows Terminal; the POSIX `install_oss.sh` bootstrap is for
+Linux/macOS.
 Use the PowerShell bootstrap to check prerequisites, install with `uv`, and
 print the current Windows capability summary:
 

@@ -87,7 +87,9 @@ Write-Output "omnigent-windows-terminal-ok"
 ```
 
 Capture a screenshot or short recording showing browser attach and command
-output.
+output. If the browser evidence uses the Shells rail fixture, note that the
+current fixture starts a Git-bash-style shell on Windows; PowerShell commands
+remain the recommended manual operator smoke commands.
 
 ## Runner transport evidence
 

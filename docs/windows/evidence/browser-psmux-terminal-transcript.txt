@@ -1,0 +1,18 @@
+
+--- attach command batch ---
+[H[2Jbash-5.3$
+[H[2Jbash-5.3$ printf '%s\n' 'omnigent-windows-terminal-ok-round2'
+omnigent-windows-terminal-ok-round2
+bash-5.3$
+
+--- attach command batch ---
+[H[2Jbash-5.3$ printf '%s\n' 'omnigent-windows-terminal-ok-round2'
+omnigent-windows-terminal-ok-round2
+bash-5.3$
+[H[2Jbash-5.3$ printf '%s\n' 'omnigent-windows-terminal-ok-round2'
+omnigent-windows-terminal-ok-round2
+bash-5.3$ printf '\033[31mRED\033[0m cursor-limit-check\n'
+RED cursor-limit-check
+bash-5.3$
+
+--- attach command batch ---

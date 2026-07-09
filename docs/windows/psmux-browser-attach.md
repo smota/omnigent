@@ -44,7 +44,8 @@ Terminal PR evidence should include an unlocked native Windows desktop recording
 or screenshots showing:
 
 1. Omnigent web terminal attached to a psmux-backed terminal.
-2. A typed command and visible output round trip, for example:
+2. A typed command and visible output round trip, plus a raw transcript when
+   xterm/canvas rendering makes DOM text assertions unreliable, for example:
 
    ```powershell
    Write-Output omnigent-windows-terminal-ok

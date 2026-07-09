@@ -26,14 +26,15 @@ $env:PIP_INDEX_URL = "https://pypi.org/simple"
 uv sync --locked --extra dev
 .\scripts\windows_safe_pytest.ps1 -StableOnly
 uv run pytest tests/terminals/test_registry.py::test_windows_psmux_backend_launch_send_read_close -p no:cacheprovider -q
-uv run pytest -m "not posix_only" -p no:cacheprovider -q
+.\scripts\windows_safe_pytest.ps1 -CollectOnly
 ```
 
 The dedicated psmux lifecycle test is hard CI because native terminal support
-requires a real Windows multiplexer signal. The broad sweep may remain
+requires a real Windows multiplexer signal. Broad Windows-safe collection is
 non-blocking while native bridge imports and remaining terminal coverage are
 being made Windows-safe. A PR that expands Windows support should include the
-broad sweep output and explicitly call out any remaining failures.
+broad collection output and explicitly call out any remaining collection or
+execution gaps.
 
 ## POSIX-only coverage
 

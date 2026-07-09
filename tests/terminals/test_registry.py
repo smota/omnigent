@@ -885,6 +885,66 @@ async def test_windows_psmux_backend_launch_send_read_close(tmp_path: Path) -> N
         await reg.shutdown()
 
 
+def test_psmux_backend_rejects_outside_cwd_override(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """psmux uses the same cwd containment policy as tmux terminals."""
+    from omnigent.terminals.backend import PsmuxTerminalMuxBackend
+
+    monkeypatch.setattr(PsmuxTerminalMuxBackend, "validate_available", lambda self: None)
+    root = tmp_path / "workspace"
+    outside = tmp_path / "outside"
+    root.mkdir()
+    outside.mkdir()
+    spec = TerminalEnvSpec(
+        command="python",
+        allow_cwd_override=True,
+        os_env=OSEnvSpec(
+            type="caller_process",
+            cwd=str(root),
+            sandbox=OSEnvSandboxSpec(type="none"),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="outside the allowed root"):
+        PsmuxTerminalMuxBackend().create(
+            "shell",
+            "s1",
+            spec,
+            cwd_override=str(outside),
+        )
+
+
+@pytest.mark.parametrize("terminal_os_env", [None, "inherit"])
+def test_psmux_backend_resolves_inherited_parent_cwd(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    terminal_os_env: str | None,
+) -> None:
+    """psmux honors inherited/no-terminal-os-env cwd from the parent agent."""
+    from omnigent.terminals.backend import PsmuxTerminalMuxBackend
+
+    monkeypatch.setattr(PsmuxTerminalMuxBackend, "validate_available", lambda self: None)
+    parent_cwd = tmp_path / "parent-workspace"
+    parent_cwd.mkdir()
+    spec = TerminalEnvSpec(command="python", os_env=terminal_os_env)
+
+    instance, cwd = PsmuxTerminalMuxBackend().create(
+        "shell",
+        "s1",
+        spec,
+        parent_os_env=OSEnvSpec(
+            type="caller_process",
+            cwd=str(parent_cwd),
+            sandbox=OSEnvSandboxSpec(type="none"),
+        ),
+    )
+
+    assert cwd == parent_cwd.resolve()
+    shutil.rmtree(instance.private_dir, ignore_errors=True)
+
+
 @pytest.mark.skipif(shutil.which("psmux") is None, reason="psmux not installed")
 @pytest.mark.windows_only
 async def test_windows_psmux_backend_strips_runner_auth_secrets(
