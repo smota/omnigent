@@ -89,6 +89,12 @@ class PsmuxTerminalInstance(TerminalInstance):
         self.running = True
         self.launch_cwd = effective_cwd
 
+    async def resize(self, *, cols: int, rows: int) -> None:
+        """Resize the psmux pane when the browser terminal changes size."""
+        if not self.running:
+            raise RuntimeError("Terminal is not running")
+        await self._tmux("resize-window", "-t", self.tmux_target, "-x", str(cols), "-y", str(rows))
+
 
 class TmuxTerminalMuxBackend:
     """Terminal backend that delegates to the existing tmux implementation."""

@@ -892,17 +892,19 @@ async def test_capture_bridge_streams_read_and_forwards_input() -> None:
     class _FakeInstance:
         running = True
         sent: list[tuple[str | None, str]] = []
+        resizes: list[tuple[int, int]] = []
         reads = 0
 
         async def read(self) -> dict[str, object]:
             self.reads += 1
-            if self.reads >= 2:
-                self.running = False
             return {"screen": "ready"}
 
         async def send(self, text: str | None = None, *, keys: str = "Enter") -> dict[str, str]:
             self.sent.append((text, keys))
             return {"status": "sent"}
+
+        async def resize(self, *, cols: int, rows: int) -> None:
+            self.resizes.append((cols, rows))
 
     class _FakeWebSocket:
         sent_bytes: list[bytes]
@@ -910,7 +912,10 @@ async def test_capture_bridge_streams_read_and_forwards_input() -> None:
 
         def __init__(self) -> None:
             self.sent_bytes = []
+            self.close_code = 0
+            self.close_reason = ""
             self._frames = [
+                {"type": "websocket.receive", "text": '{"type":"resize","cols":100,"rows":40}'},
                 {"type": "websocket.receive", "bytes": b"echo hi\r"},
                 {"type": "websocket.disconnect"},
             ]
@@ -923,7 +928,8 @@ async def test_capture_bridge_streams_read_and_forwards_input() -> None:
             return self._frames.pop(0)
 
         async def close(self, code: int = 1000, reason: str = "") -> None:
-            del code, reason
+            self.close_code = code
+            self.close_reason = reason
             self.closed = True
 
     instance = _FakeInstance()
@@ -931,9 +937,60 @@ async def test_capture_bridge_streams_read_and_forwards_input() -> None:
 
     await bridge_capture_to_websocket(ws, instance=instance, read_only=False, poll_interval_s=0)
 
+    from omnigent.terminals.ws_bridge import WS_CLOSE_TERMINAL_DETACHED
+
     assert b"ready" in ws.sent_bytes
     assert ("echo hi", "Enter") in instance.sent
+    assert (100, 40) in instance.resizes
     assert ws.closed is True
+    assert ws.close_code == WS_CLOSE_TERMINAL_DETACHED
+
+
+async def test_capture_bridge_closes_not_found_when_backend_dies() -> None:
+    """Capture bridge tells clients to stop reconnecting after backend exit."""
+    from omnigent.terminals.ws_bridge import (
+        WS_CLOSE_TERMINAL_NOT_FOUND,
+        bridge_capture_to_websocket,
+    )
+
+    class _DeadInstance:
+        running = False
+
+        async def is_alive(self) -> bool:
+            return False
+
+        async def read(self) -> dict[str, object]:  # pragma: no cover - should not run
+            return {"screen": ""}
+
+    class _WaitingWebSocket:
+        closed = False
+        close_code = 0
+        close_reason = ""
+
+        async def send_bytes(self, data: bytes) -> None:
+            del data
+
+        async def receive(self) -> dict[str, object]:
+            await asyncio.sleep(10)
+            return {"type": "websocket.disconnect"}
+
+        async def close(self, code: int = 1000, reason: str = "") -> None:
+            self.close_code = code
+            self.close_reason = reason
+            self.closed = True
+
+    ws = _WaitingWebSocket()
+
+    await bridge_capture_to_websocket(
+        ws,
+        instance=_DeadInstance(),
+        read_only=False,
+        poll_interval_s=0,
+    )
+
+    assert ws.closed is True
+    assert ws.close_code == WS_CLOSE_TERMINAL_NOT_FOUND
+    assert ws.close_reason == "terminal session ended"
 
 
 def test_psmux_backend_missing_binary_error_is_actionable(monkeypatch: pytest.MonkeyPatch) -> None:
