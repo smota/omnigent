@@ -49,8 +49,8 @@ _CAPABILITIES: dict[str, SandboxCapabilities] = {
         egress_policy=True,
         notes="seatbelt profile enforces filesystem and network policy",
     ),
-    "windows_job_object": SandboxCapabilities(
-        backend="windows_job_object",
+    "windows_jobobject": SandboxCapabilities(
+        backend="windows_jobobject",
         platform="windows",
         process_containment=True,
         filesystem_isolation=False,
@@ -97,7 +97,7 @@ def default_sandbox_backend_for_platform(platform: str | None = None) -> str:
     """Return the default sandbox backend name for a platform family."""
     name = platform or os.name
     if name == "nt":
-        return "windows_job_object"
+        return "windows_jobobject"
     if name == "posix":
         if os.uname().sysname == "Darwin":
             return "darwin_seatbelt"

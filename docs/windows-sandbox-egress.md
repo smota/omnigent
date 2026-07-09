@@ -10,7 +10,7 @@ not equivalent to the hardened POSIX sandboxes.
 | --- | --- | --- | --- | --- | --- |
 | `linux_bwrap` | Linux | Yes | Yes | Yes | Yes |
 | `darwin_seatbelt` | macOS | Yes | Yes | Yes | Yes |
-| `windows_job_object` | Windows | Yes | No | No | No |
+| `windows_jobobject` | Windows | Yes | No | No | No |
 | `none` | Any | No | No | No | No |
 
 ## Windows policy

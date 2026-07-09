@@ -818,6 +818,7 @@ def _parse_os_env_sandbox(
     overflow = _parse_cwd_hidden_scan_overflow(raw.get("cwd_hidden_scan_overflow"))
     env_passthrough = _parse_env_passthrough(raw.get("env_passthrough"))
     egress_rules = _parse_egress_rules(raw.get("egress_rules"))
+    allow_network = bool(raw.get("allow_network", True))
     raw_type = raw.get("type")
     if raw_type is None:
         # No ``type:`` field in the sandbox block -- resolve via the
@@ -830,6 +831,15 @@ def _parse_os_env_sandbox(
         sandbox_type = _default_sandbox_for_platform().type
     else:
         sandbox_type = str(raw_type)
+    if sandbox_type == "windows_jobobject" and not allow_network:
+        raise OmnigentError(
+            "os_env.sandbox.allow_network=false is not supported with "
+            "sandbox.type=windows_jobobject: Windows Job Objects contain "
+            "process trees but do not hard-enforce network denial. Use a "
+            "Linux/macOS hardened sandbox for network isolation or set "
+            "allow_network=true on Windows.",
+            code=ErrorCode.INVALID_INPUT,
+        )
     if egress_rules and sandbox_type not in ("linux_bwrap", "darwin_seatbelt"):
         raise OmnigentError(
             "os_env.sandbox.egress_rules requires sandbox.type=linux_bwrap "
@@ -870,7 +880,7 @@ def _parse_os_env_sandbox(
         read_paths=[str(p) for p in read_paths_raw] if read_paths_raw is not None else None,
         write_paths=[str(p) for p in write_paths_raw] if write_paths_raw is not None else None,
         write_files=[str(p) for p in write_files_raw] if write_files_raw is not None else None,
-        allow_network=bool(raw.get("allow_network", True)),
+        allow_network=allow_network,
         cwd_allow_hidden=cwd_allow_hidden,
         cwd_hidden_scan_max_entries=max_entries,
         cwd_hidden_scan_overflow=overflow,

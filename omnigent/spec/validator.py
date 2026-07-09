@@ -471,10 +471,9 @@ def _validate_compaction(spec: AgentSpec, result: ValidationResult) -> None:
 
 
 # Set of sandbox backends that hard-enforce network isolation
-# (and therefore can host an L7 egress proxy). Mirrors the loader's
-# allow-list in ``omnigent/inner/loader.py``. ``none`` is excluded
-# — it doesn't install a namespace or SBPL, so egress rules would be
-# inert decoration on the policy.
+# (and therefore can host an L7 egress proxy). Mirrors the parser's
+# allow-list. ``none`` and ``windows_jobobject`` are excluded: neither
+# can enforce network deny/egress policy.
 _EGRESS_CAPABLE_BACKENDS = frozenset({"linux_bwrap", "darwin_seatbelt"})
 
 
@@ -518,6 +517,7 @@ def _validate_os_env(spec: AgentSpec, result: ValidationResult) -> None:
     egress_rules = (
         list(getattr(sandbox, "egress_rules", None) or []) if sandbox is not None else []
     )
+    allow_network = bool(getattr(sandbox, "allow_network", True)) if sandbox is not None else True
 
     if start_in_scratch and fork:
         result.add(
@@ -531,6 +531,16 @@ def _validate_os_env(spec: AgentSpec, result: ValidationResult) -> None:
             "os_env.start_in_scratch",
             "os_env.start_in_scratch requires an active sandbox; "
             "sandbox.type=none does not create a scratch tmpdir",
+        )
+
+    if sandbox_type == "windows_jobobject" and not allow_network:
+        result.add(
+            "os_env.sandbox.allow_network",
+            "os_env.sandbox.allow_network=false is not supported with "
+            "sandbox.type=windows_jobobject: Windows Job Objects contain "
+            "process trees but do not hard-enforce network denial. Use a "
+            "Linux/macOS hardened sandbox for network isolation or set "
+            "allow_network=true on Windows.",
         )
 
     if egress_rules and sandbox_type not in _EGRESS_CAPABLE_BACKENDS:

@@ -8,9 +8,9 @@ from omnigent.inner.sandbox_capabilities import (
 )
 
 
-def test_windows_job_object_capabilities_are_process_only() -> None:
+def test_windows_jobobject_capabilities_are_process_only() -> None:
     """Windows metadata is explicit about containment but no egress isolation."""
-    caps = sandbox_capabilities("windows_job_object")
+    caps = sandbox_capabilities("windows_jobobject")
 
     assert caps.platform == "windows"
     assert caps.process_containment is True
@@ -39,4 +39,4 @@ def test_unknown_backend_fails_closed() -> None:
 
 def test_default_windows_backend() -> None:
     """Native Windows defaults to process containment metadata."""
-    assert default_sandbox_backend_for_platform("nt") == "windows_job_object"
+    assert default_sandbox_backend_for_platform("nt") == "windows_jobobject"
