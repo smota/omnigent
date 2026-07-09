@@ -934,3 +934,14 @@ async def test_capture_bridge_streams_read_and_forwards_input() -> None:
     assert b"ready" in ws.sent_bytes
     assert ("echo hi", "Enter") in instance.sent
     assert ws.closed is True
+
+
+def test_psmux_backend_missing_binary_error_is_actionable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Missing psmux tells Windows users how to recover."""
+    import omnigent.terminals.backend as backend
+
+    monkeypatch.setattr(backend, "IS_WINDOWS", True)
+    monkeypatch.setattr(backend.shutil, "which", lambda _name: None)
+
+    with pytest.raises(RuntimeError, match="Install psmux"):
+        backend.PsmuxTerminalMuxBackend().validate_available()

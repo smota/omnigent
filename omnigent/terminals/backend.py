@@ -127,6 +127,17 @@ class PsmuxTerminalMuxBackend:
     def name(self) -> str:
         return "psmux"
 
+    def validate_available(self) -> None:
+        """Fail loudly when the psmux backend cannot run on this machine."""
+        if not IS_WINDOWS:
+            raise RuntimeError("psmux terminal backend is only supported on Windows")
+        if shutil.which("psmux") is None:
+            raise RuntimeError(
+                "psmux is required for Omnigent-managed terminals on native Windows "
+                "but was not found on PATH. Install psmux and restart the Omnigent "
+                "host, or use WSL/Linux/macOS for the tmux terminal backend."
+            )
+
     def create(
         self,
         terminal_name: str,
@@ -139,10 +150,7 @@ class PsmuxTerminalMuxBackend:
         conversation_link: str | None = None,
     ) -> tuple[TerminalInstance, Path]:
         del parent_os_env, sandbox_override, conversation_link
-        if not IS_WINDOWS:
-            raise RuntimeError("psmux terminal backend is only supported on Windows")
-        if shutil.which("psmux") is None:
-            raise RuntimeError("psmux is not installed or not on PATH")
+        self.validate_available()
         private_dir = Path(tempfile.mkdtemp(prefix="omnigent-terminal-"))
         cwd = Path(cwd_override or (spec.os_env.cwd if spec.os_env else os.getcwd())).resolve()
         instance = PsmuxTerminalInstance(
