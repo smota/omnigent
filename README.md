@@ -126,14 +126,40 @@ uv tool install -q --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
 <details>
 <summary>Windows (native)</summary>
 
-Omnigent runs natively on Windows in a degraded mode. The `install_oss.sh`
-bootstrap is POSIX-only, so install with `uv` directly:
+Omnigent runs natively on Windows in a degraded mode. Use the PowerShell
+bootstrap to check prerequisites, install with `uv`, and print the current
+Windows capability summary:
+
+```powershell
+irm https://raw.githubusercontent.com/omnigent-ai/omnigent/main/scripts/install_oss.ps1 | iex
+```
+
+For release-pinned installs, download the script from the matching tag and pass
+`-Version` so `uv` installs the same published wheel version:
+
+```powershell
+$version = "0.0.0"  # replace with the release tag/version
+irm "https://raw.githubusercontent.com/omnigent-ai/omnigent/v$version/scripts/install_oss.ps1" -OutFile install_oss.ps1
+.\install_oss.ps1 -Version $version
+```
+
+For a read-only prerequisite check, download the script and run:
+
+```powershell
+.\install_oss.ps1 -CheckOnly
+```
+
+Or install manually with `uv`:
 
 ```powershell
 uv tool install --python 3.12 omnigent
 # or from the repo:
 uv tool install --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
 ```
+
+Re-running the installer is idempotent: it reuses the `uv` tool directory,
+refreshes the user `PATH` only when needed, and reinstalls Omnigent with
+`uv tool install --force`.
 
 What works on Windows: `omnigent server`, the web UI, and the SDK-based
 harnesses (`omnigent run <agent.yaml>` with the claude-sdk / cursor / codex
