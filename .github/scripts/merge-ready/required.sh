@@ -8,6 +8,7 @@
 
 REQUIRED=(
   "Pre-commit checks"
+  "Docker build"
   "Pytest (runtime-harnesses)"
   "Pytest (runtime-policies)"
   "Pytest (runtime-core)"
@@ -20,6 +21,8 @@ REQUIRED=(
   "Pytest (server-responses)"
   "Pytest (server-rest)"
   "Pytest (spec-llms)"
+  "Pytest (runner-app)"
+  "Pytest (stores)"
   "Pytest (misc)"
   "Pytest (databricks)"
   "E2E Tests (shard 0/4)"
@@ -36,6 +39,7 @@ REQUIRED=(
 )
 
 ALLOW_SKIP=(
+  "Docker build"
   "Pytest (runtime-harnesses)"
   "Pytest (runtime-policies)"
   "Pytest (runtime-core)"
@@ -48,6 +52,8 @@ ALLOW_SKIP=(
   "Pytest (server-responses)"
   "Pytest (server-rest)"
   "Pytest (spec-llms)"
+  "Pytest (runner-app)"
+  "Pytest (stores)"
   "Pytest (misc)"
   "Pytest (databricks)"
   "E2E Tests (shard 0/4)"
@@ -71,6 +77,7 @@ is_allow_skip() { printf '%s\n' "${ALLOW_SKIP[@]}" | grep -qxF "$1"; }
 # workflow is still queued or re-running.
 workflow_for() {
   case "$1" in
+    "Docker build")          echo "Docker build" ;;
     "Pytest ("*)             echo "CI" ;;
     "E2E Tests (shard "*)    echo "E2E Tests" ;;
     "E2E UI Tests (shard "*) echo "E2E UI Tests" ;;

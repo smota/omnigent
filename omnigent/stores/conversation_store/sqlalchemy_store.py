@@ -701,7 +701,7 @@ class SqlAlchemyConversationStore(ConversationStore):
                 # session close.
                 return _to_conversation(row)
         except IntegrityError as exc:
-            # Translate the partial-unique-index violation into a
+            # Translate the unique-index violation into a
             # clean exception type the spawn/send tools can map
             # to a name_already_exists tool error. Other integrity
             # violations (FK, check constraints) re-raise.
@@ -714,10 +714,10 @@ class SqlAlchemyConversationStore(ConversationStore):
             # check, which would misclassify any future unique
             # constraint added to the conversations table.
             msg = str(exc).lower()
-            is_partial_index_violation = "ix_conversations_parent_title_unique" in msg or (
+            is_title_unique_violation = "ix_conversations_parent_title_unique" in msg or (
                 "unique" in msg and "parent_conversation_id" in msg and "title" in msg
             )
-            if is_partial_index_violation:
+            if is_title_unique_violation:
                 raise NameAlreadyExistsError(
                     f"sub-agent name already exists under parent "
                     f"{parent_conversation_id!r}: title={title!r}"
@@ -1311,23 +1311,32 @@ class SqlAlchemyConversationStore(ConversationStore):
                         "ORDER BY rank LIMIT :limit"
                     )
             else:
-                # PostgreSQL: ILIKE fallback (no FTS5 virtual table).
-                # Full tsvector/tsquery indexing can be added later.
+                # Non-SQLite fallback: LIKE/ILIKE on the data column.
+                # PostgreSQL: cast MEDIUMBLOB/JSONB to text and use ILIKE.
+                # MySQL: CONVERT(data USING utf8mb4) + LIKE (case-insensitive
+                #        by default with utf8mb4_unicode_ci collation).
                 like_pattern = f"%{query}%"
+                is_mysql = self._engine.dialect.name == "mysql"
+                if is_mysql:
+                    data_expr = "CONVERT(ci.data USING utf8mb4)"
+                    like_op = "LIKE"
+                else:
+                    data_expr = "ci.data::text"
+                    like_op = "ILIKE"
                 if conversation_id is not None:
                     stmt = text(
-                        "SELECT ci.id FROM conversation_items ci "
-                        "WHERE ci.workspace_id = :ws "
-                        "AND ci.conversation_id = :cid "
-                        "AND ci.data::text ILIKE :query "
-                        "ORDER BY ci.created_at DESC LIMIT :limit"
+                        f"SELECT ci.id FROM conversation_items ci "
+                        f"WHERE ci.workspace_id = :ws "
+                        f"AND ci.conversation_id = :cid "
+                        f"AND {data_expr} {like_op} :query "
+                        f"ORDER BY ci.created_at DESC LIMIT :limit"
                     )
                 else:
                     stmt = text(
-                        "SELECT ci.id FROM conversation_items ci "
-                        "WHERE ci.workspace_id = :ws "
-                        "AND ci.data::text ILIKE :query "
-                        "ORDER BY ci.created_at DESC LIMIT :limit"
+                        f"SELECT ci.id FROM conversation_items ci "
+                        f"WHERE ci.workspace_id = :ws "
+                        f"AND {data_expr} {like_op} :query "
+                        f"ORDER BY ci.created_at DESC LIMIT :limit"
                     )
                 query = like_pattern
             params: dict[str, str | int] = {
