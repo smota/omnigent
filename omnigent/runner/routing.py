@@ -17,8 +17,10 @@ import httpx
 
 from omnigent.errors import ErrorCode, OmnigentError
 from omnigent.harness_aliases import canonicalize_harness
-from omnigent.runner.transports.ws_tunnel.transport import WSTunnelTransport
-from omnigent.runtime import telemetry
+from omnigent.runner.transport_locator import (
+    RunnerTransportLocator,
+    WSTunnelRunnerTransportLocator,
+)
 from omnigent.runtime.harnesses import _HARNESS_MODULES
 from omnigent.spec import AgentSpec
 
@@ -73,6 +75,8 @@ class RunnerRouter:
         ``WS /v1/runners/{runner_id}/tunnel``.
     :param conversation_store: Store used to read
         ``conversations.runner_id`` affinity.
+    :param transport_locator: Optional transport seam. Defaults to the
+        WebSocket tunnel locator used today.
     """
 
     def __init__(
@@ -80,10 +84,11 @@ class RunnerRouter:
         *,
         registry: TunnelRegistry,
         conversation_store: ConversationStore,
+        transport_locator: RunnerTransportLocator | None = None,
     ) -> None:
         self._registry = registry
         self._conversation_store = conversation_store
-        self._clients: dict[str, httpx.AsyncClient] = {}
+        self._transport_locator = transport_locator or WSTunnelRunnerTransportLocator(registry)
         self._lock = threading.RLock()
 
     def client_for_conversation(self, *, conversation_id: str, harness: str) -> RoutedRunner:
@@ -212,10 +217,8 @@ class RunnerRouter:
         :returns: None.
         """
         with self._lock:
-            clients = list(self._clients.values())
-            self._clients.clear()
-        for client in clients:
-            await client.aclose()
+            locator = self._transport_locator
+        await locator.aclose()
 
     def _routed_pinned_runner(self, runner_id: str, *, harness: str) -> RoutedRunner:
         """
@@ -246,24 +249,10 @@ class RunnerRouter:
 
         :param runner_id: Runner UUID, e.g.
             ``"runner_0123456789abcdef"``.
-        :returns: ``httpx.AsyncClient`` using
-            :class:`WSTunnelTransport`.
+        :returns: ``httpx.AsyncClient`` using the configured transport locator.
         """
         with self._lock:
-            client = self._clients.get(runner_id)
-            if client is None:
-                client = httpx.AsyncClient(
-                    transport=WSTunnelTransport(self._registry, runner_id),
-                    base_url="http://runner",
-                    timeout=httpx.Timeout(5.0, read=None),
-                )
-                # The global httpx instrumentation can't see this client's
-                # custom WSTunnelTransport, so instrument the instance
-                # directly — otherwise server→runner forwards carry no
-                # traceparent and the runner roots a disconnected trace.
-                telemetry.instrument_httpx_client(client)
-                self._clients[runner_id] = client
-            return client
+            return self._transport_locator.client_for_runner(runner_id)
 
 
 def _runner_supports_harness(session: RunnerSession, harness: str) -> bool:
