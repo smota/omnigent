@@ -34,6 +34,23 @@ class RunnerTransportLocator(Protocol):
         """Close any cached transport clients."""
 
 
+class LocalRunnerTransportLocator:
+    """Runner transport locator backed by one configured local transport."""
+
+    def __init__(self, client: httpx.AsyncClient) -> None:
+        """Create a locator that returns *client* for every pinned runner."""
+        self._client = client
+
+    def client_for_runner(self, runner_id: str) -> httpx.AsyncClient:
+        """Return the configured local runner client for *runner_id*."""
+        del runner_id
+        return self._client
+
+    async def aclose(self) -> None:
+        """Close the configured local runner client."""
+        await self._client.aclose()
+
+
 class WSTunnelRunnerTransportLocator:
     """Default runner transport locator backed by the WebSocket tunnel registry."""
 

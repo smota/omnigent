@@ -120,7 +120,7 @@ def test_build_runner_transport_requires_a_transport() -> None:
 
 def test_build_runner_transport_from_env_prefers_tcp(tmp_path: Any) -> None:
     """Runtime env selection prefers cross-platform TCP over POSIX UDS."""
-    client, _factory = rt.build_runner_transport_from_env(
+    client, _factory, selected = rt.build_runner_transport_from_env(
         {
             rt.RUNNER_TCP_BASE_URL_ENV: " http://127.0.0.1:7777 ",
             rt.RUNNER_UDS_PATH_ENV: str(tmp_path / "runner.sock"),
@@ -128,8 +128,19 @@ def test_build_runner_transport_from_env_prefers_tcp(tmp_path: Any) -> None:
     )
     try:
         assert client.base_url == httpx.URL("http://127.0.0.1:7777")
+        assert selected == "tcp"
     finally:
         client._transport.__dict__.clear()
+
+
+def test_runner_transport_env_configured_ignores_blank_values() -> None:
+    """Blank env values are treated as missing config."""
+    assert not rt.runner_transport_env_configured(
+        {
+            rt.RUNNER_TCP_BASE_URL_ENV: "  ",
+            rt.RUNNER_UDS_PATH_ENV: "",
+        }
+    )
 
 
 def test_build_runner_transport_from_env_rejects_blank_config() -> None:
