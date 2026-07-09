@@ -116,3 +116,36 @@ def test_build_runner_transport_requires_a_transport() -> None:
     """Missing transport config fails loud instead of guessing."""
     with pytest.raises(RuntimeError, match="provide tcp_base_url or uds_path"):
         rt.build_runner_transport()
+
+
+def test_build_runner_transport_from_env_prefers_tcp(tmp_path: Any) -> None:
+    """Runtime env selection prefers cross-platform TCP over POSIX UDS."""
+    client, _factory = rt.build_runner_transport_from_env(
+        {
+            rt.RUNNER_TCP_BASE_URL_ENV: " http://127.0.0.1:7777 ",
+            rt.RUNNER_UDS_PATH_ENV: str(tmp_path / "runner.sock"),
+        }
+    )
+    try:
+        assert client.base_url == httpx.URL("http://127.0.0.1:7777")
+    finally:
+        client._transport.__dict__.clear()
+
+
+def test_build_runner_transport_from_env_rejects_blank_config() -> None:
+    """Blank env values are treated as missing config and fail loud."""
+    with pytest.raises(RuntimeError, match="provide tcp_base_url or uds_path"):
+        rt.build_runner_transport_from_env(
+            {
+                rt.RUNNER_TCP_BASE_URL_ENV: "  ",
+                rt.RUNNER_UDS_PATH_ENV: "",
+            }
+        )
+
+
+def test_build_runner_transport_from_env_windows_uds_hint(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Windows UDS-only env config points operators at TCP."""
+    monkeypatch.setattr(rt.os, "name", "nt")
+
+    with pytest.raises(RuntimeError, match="TCP runner base URL"):
+        rt.build_runner_transport_from_env({rt.RUNNER_UDS_PATH_ENV: "runner.sock"})

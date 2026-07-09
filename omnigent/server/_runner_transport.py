@@ -15,6 +15,35 @@ import httpx
 # library versions.
 RunnerWSFactory = Callable[[str], Any]
 
+RUNNER_TCP_BASE_URL_ENV = "OMNIGENT_RUNNER_TCP_BASE_URL"
+RUNNER_UDS_PATH_ENV = "OMNIGENT_RUNNER_UDS_PATH"
+
+
+def build_runner_transport_from_env(
+    environ: dict[str, str] | None = None,
+) -> tuple[httpx.AsyncClient, RunnerWSFactory]:
+    """Build a local runner transport from environment configuration.
+
+    ``OMNIGENT_RUNNER_TCP_BASE_URL`` is cross-platform and preferred. The UDS
+    env var remains available for POSIX deployments. On native Windows, UDS-only
+    configuration fails with the same actionable TCP guidance as
+    :func:`build_runner_transport`.
+    """
+    env = os.environ if environ is None else environ
+    return build_runner_transport(
+        tcp_base_url=_non_empty_env(env, RUNNER_TCP_BASE_URL_ENV),
+        uds_path=_non_empty_env(env, RUNNER_UDS_PATH_ENV),
+    )
+
+
+def _non_empty_env(env: dict[str, str], name: str) -> str | None:
+    """Return a stripped env value or ``None`` when unset/blank."""
+    value = env.get(name)
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
 
 def build_runner_transport(
     *,
