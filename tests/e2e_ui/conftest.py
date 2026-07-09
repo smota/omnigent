@@ -686,12 +686,13 @@ def built_spa(request: pytest.FixtureRequest) -> None:
         # @emoji-mart/react / React 19 peer conflict. This matches the
         # workflow-side fix for parity with local runs and the case
         # where conftest installs override CI's build.
+        npm = "npm.cmd" if sys.platform == "win32" else "npm"
         subprocess.run(
-            ["npm", "ci", "--legacy-peer-deps", "--no-audit", "--no-fund"],
+            [npm, "ci", "--legacy-peer-deps", "--no-audit", "--no-fund"],
             cwd=_WEB_DIR,
             check=True,
         )
-        subprocess.run(["npm", "run", "build"], cwd=_WEB_DIR, check=True)
+        subprocess.run([npm, "run", "build"], cwd=_WEB_DIR, check=True)
 
     _assert_pwa_build(_BUILD_OUTPUT)
 
