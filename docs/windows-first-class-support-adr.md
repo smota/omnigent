@@ -11,10 +11,10 @@ sandboxing, test execution, and installer/developer workflows. The Windows
 parity work should make native Windows a first-class supported platform without
 trying to reproduce every Linux/macOS behavior in the first milestone.
 
-This decision follows a conservative architecture review of the fork backlog and
-implementation branch. The full Claude CLI review is saved locally at
-`.pi/tmp/claude-architecture-conversation.md` and should be treated as review
-input, not as a committed project artifact.
+This decision captures the product and engineering boundary for a first
+Windows enablement wave. It is intentionally scoped: the platform should feel
+supported and reliable for agreed workflows, while unsupported security or
+terminal-fidelity behaviors remain explicit rather than implied.
 
 The current goal is to support native Windows for:
 
@@ -27,6 +27,25 @@ The current goal is to support native Windows for:
 
 The goal is not to claim complete POSIX parity where Windows behavior is not yet
 equivalent.
+
+## Windows documentation map
+
+Detailed operational and design material lives under `docs/windows/` so this
+ADR can stay readable as the top-level decision record:
+
+- [`docs/windows/qa-matrix.md`](windows/qa-matrix.md) defines hard CI,
+  non-blocking CI, manual QA, and PR evidence expectations.
+- [`docs/windows/test-execution.md`](windows/test-execution.md) documents the
+  native PowerShell test helper and the stable/broad Windows test split.
+- [`docs/windows/e2e-evidence.md`](windows/e2e-evidence.md) describes the
+  evidence package expected for end-to-end Windows validation.
+- [`docs/windows/sandbox-egress.md`](windows/sandbox-egress.md) records the
+  current Windows sandbox and egress capability boundary.
+- [`docs/windows/sandbox-isolation-design.md`](windows/sandbox-isolation-design.md)
+  compares future Windows isolation options such as AppContainer, restricted
+  tokens, WFP/firewall policy, proxy enforcement, and VM/container isolation.
+- [`docs/windows/upstream-related-work.md`](windows/upstream-related-work.md)
+  tracks adjacent upstream workstreams that affect Windows enablement.
 
 ## Decision
 

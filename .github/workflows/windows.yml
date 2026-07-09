@@ -2,7 +2,7 @@ name: Windows (native)
 
 # Smoke + unit check that omnigent imports, the CLI loads, and the
 # cross-platform process/sandbox primitives work on native Windows. See
-# docs/windows-qa-matrix.md for the CI/manual QA contract. The broad unit sweep
+# docs/windows/qa-matrix.md for the CI/manual QA contract. The broad unit sweep
 # remains NON-BLOCKING while native Windows support stabilizes: it is not wired
 # into merge-ready.yml, and continue-on-error keeps known parity gaps from
 # gating unrelated merges. The hard checks (import, --help, the Windows-support
