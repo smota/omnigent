@@ -3487,3 +3487,19 @@ def test_parse_credential_proxy_https_primitive_allowed_on_macos(tmp_path: Path)
     proxy = spec.os_env.sandbox.credential_proxy
     assert proxy is not None
     assert proxy.entries[0].scheme == "bearer"
+
+
+def test_parse_windows_jobobject_rejects_network_deny(tmp_path: Path) -> None:
+    """Windows Job Objects cannot hard-enforce ``allow_network: false``."""
+    config = {
+        "spec_version": 1,
+        "name": "windows-network-deny",
+        "os_env": {
+            "type": "caller_process",
+            "sandbox": {"type": "windows_jobobject", "allow_network": False},
+        },
+    }
+    (tmp_path / "config.yaml").write_text(yaml.dump(config))
+
+    with pytest.raises(OmnigentError, match=r"windows_jobobject"):
+        parse(tmp_path)
