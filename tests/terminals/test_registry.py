@@ -24,9 +24,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from omnigent.inner.terminal import TerminalCreateResult, TerminalInstance
+from omnigent.inner.terminal import TerminalInstance
 from omnigent.terminals import TerminalRegistry
-from omnigent.terminals import registry as registry_mod
 from omnigent.terminals.registry import TerminalListEntry, conversation_link_for_id
 
 # ── Pure bookkeeping (no tmux) ────────────────────────────────
@@ -159,10 +158,7 @@ async def test_shutdown_on_empty_registry_is_noop() -> None:
     assert reg.active_conversation_ids() == []
 
 
-async def test_launch_replaces_stale_running_entry(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_launch_replaces_stale_running_entry(tmp_path: Path) -> None:
     """``launch`` verifies a cached running entry before returning it."""
 
     class _FlagTerminal(TerminalInstance):
@@ -184,7 +180,14 @@ async def test_launch_replaces_stale_running_entry(
             self.closed = True
             self.running = False
 
-    reg = TerminalRegistry()
+    class _FakeBackend:
+        @property
+        def name(self) -> str:
+            return "fake"
+
+        def create(self, *_args: object, **_kwargs: object) -> tuple[TerminalInstance, Path]:
+            return created, tmp_path
+
     stale = _FlagTerminal(
         name="shell",
         session_key="s1",
@@ -200,13 +203,9 @@ async def test_launch_replaces_stale_running_entry(
         private_dir=tmp_path / "created",
         running=False,
     )
+    reg = TerminalRegistry(backend=_FakeBackend())
     reg._by_conversation["conv_x"] = {("shell", "s1"): stale}
     reg._instance_locks[("conv_x", "shell", "s1")] = threading.Lock()
-
-    def _fake_create_terminal_instance(*_args: object, **_kwargs: object) -> TerminalCreateResult:
-        return TerminalCreateResult(instance=created, cwd=tmp_path)
-
-    monkeypatch.setattr(registry_mod, "create_terminal_instance", _fake_create_terminal_instance)
 
     result = await reg.launch(
         "conv_x",
@@ -846,3 +845,103 @@ def test_multiple_terminals_per_conversation(tmp_path: Path) -> None:
 
     for (name, key), inst in instances.items():
         assert reg.get("conv_a", name, key) is inst
+
+
+@pytest.mark.skipif(shutil.which("psmux") is None, reason="psmux not installed")
+@pytest.mark.windows_only
+async def test_windows_psmux_backend_launch_send_read_close(tmp_path: Path) -> None:
+    """psmux backend supports the basic registry lifecycle on Windows."""
+    from omnigent.terminals.backend import PsmuxTerminalMuxBackend
+
+    reg = TerminalRegistry(backend=PsmuxTerminalMuxBackend())
+    spec = TerminalEnvSpec(
+        command="powershell.exe",
+        args=["-NoProfile", "-NoExit", "-Command", "Write-Output ready"],
+        os_env=OSEnvSpec(
+            type="caller_process",
+            cwd=str(tmp_path),
+            sandbox=OSEnvSandboxSpec(type="none"),
+        ),
+    )
+    instance = await reg.launch("conv_psmux", "shell", "s1", spec)
+    try:
+        assert instance.running is True
+        read = {}
+        for _ in range(20):
+            await asyncio.sleep(0.2)
+            read = await instance.read()
+            if "ready" in read.get("screen", ""):
+                break
+        assert "ready" in read.get("screen", "")
+        sent = await instance.send("Write-Output hi", keys="Enter")
+        assert sent == {"status": "sent"}
+        for _ in range(20):
+            await asyncio.sleep(0.2)
+            read = await instance.read()
+            if "hi" in read.get("screen", ""):
+                break
+        assert "hi" in read.get("screen", "")
+    finally:
+        await reg.shutdown()
+
+
+async def test_capture_bridge_streams_read_and_forwards_input() -> None:
+    """Capture bridge streams snapshots and sends websocket input to backend."""
+    from omnigent.terminals.ws_bridge import bridge_capture_to_websocket
+
+    class _FakeInstance:
+        running = True
+        sent: list[tuple[str | None, str]] = []
+        reads = 0
+
+        async def read(self) -> dict[str, object]:
+            self.reads += 1
+            if self.reads >= 2:
+                self.running = False
+            return {"screen": "ready"}
+
+        async def send(self, text: str | None = None, *, keys: str = "Enter") -> dict[str, str]:
+            self.sent.append((text, keys))
+            return {"status": "sent"}
+
+    class _FakeWebSocket:
+        sent_bytes: list[bytes]
+        closed = False
+
+        def __init__(self) -> None:
+            self.sent_bytes = []
+            self._frames = [
+                {"type": "websocket.receive", "bytes": b"echo hi\r"},
+                {"type": "websocket.disconnect"},
+            ]
+
+        async def send_bytes(self, data: bytes) -> None:
+            self.sent_bytes.append(data)
+
+        async def receive(self) -> dict[str, object]:
+            await asyncio.sleep(0)
+            return self._frames.pop(0)
+
+        async def close(self, code: int = 1000, reason: str = "") -> None:
+            del code, reason
+            self.closed = True
+
+    instance = _FakeInstance()
+    ws = _FakeWebSocket()
+
+    await bridge_capture_to_websocket(ws, instance=instance, read_only=False, poll_interval_s=0)
+
+    assert b"ready" in ws.sent_bytes
+    assert ("echo hi", "Enter") in instance.sent
+    assert ws.closed is True
+
+
+def test_psmux_backend_missing_binary_error_is_actionable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Missing psmux tells Windows users how to recover."""
+    import omnigent.terminals.backend as backend
+
+    monkeypatch.setattr(backend, "IS_WINDOWS", True)
+    monkeypatch.setattr(backend.shutil, "which", lambda _name: None)
+
+    with pytest.raises(RuntimeError, match="Install psmux"):
+        backend.PsmuxTerminalMuxBackend().validate_available()
