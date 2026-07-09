@@ -520,33 +520,59 @@ async def bridge_capture_to_websocket(
     if on_client_interaction is not None:
         on_client_interaction()
     last_screen = ""
+    close_code = WS_CLOSE_TERMINAL_DETACHED
+    close_reason = "terminal detached"
+
+    async def _instance_alive() -> bool:
+        is_alive = getattr(instance, "is_alive", None)
+        if callable(is_alive):
+            return bool(await is_alive())
+        return bool(getattr(instance, "running", False))
 
     async def _capture_loop() -> None:
-        nonlocal last_screen
-        while bool(getattr(instance, "running", False)):
+        nonlocal last_screen, close_code, close_reason
+        while await _instance_alive():
             read = await instance.read()  # type: ignore[attr-defined]
             screen = read.get("screen", "") if isinstance(read, dict) else ""
             if screen != last_screen:
                 last_screen = screen
                 await websocket.send_bytes(screen.encode("utf-8", errors="replace"))
             await asyncio.sleep(poll_interval_s)
+        close_code = WS_CLOSE_TERMINAL_NOT_FOUND
+        close_reason = "terminal session ended"
 
     async def _input_loop() -> None:
+        nonlocal close_code, close_reason
         while True:
             msg = await websocket.receive()
             if on_client_interaction is not None:
                 on_client_interaction()
             if msg.get("type") == "websocket.disconnect":
+                close_code = WS_CLOSE_TERMINAL_DETACHED
+                close_reason = "terminal detached"
                 return
             if msg.get("text") is not None:
                 try:
-                    json.loads(msg["text"])
+                    ctl = json.loads(msg["text"])
                 except (json.JSONDecodeError, ValueError):
-                    pass
+                    continue
+                if isinstance(ctl, dict) and ctl.get("type") == "resize":
+                    try:
+                        cols = int(ctl["cols"])
+                        rows = int(ctl["rows"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    resize = getattr(instance, "resize", None)
+                    if callable(resize):
+                        await resize(cols=cols, rows=rows)
                 continue
             data = msg.get("bytes")
             if data is None or read_only:
                 continue
+            if not await _instance_alive():
+                close_code = WS_CLOSE_TERMINAL_NOT_FOUND
+                close_reason = "terminal session ended"
+                return
             text = data.decode("utf-8", errors="ignore")
             if not text:
                 continue
@@ -575,7 +601,7 @@ async def bridge_capture_to_websocket(
         if on_client_interaction is not None:
             on_client_interaction()
         with contextlib.suppress(RuntimeError):
-            await websocket.close()
+            await websocket.close(code=close_code, reason=close_reason)
 
 
 async def bridge_tmux_pty_to_websocket(
