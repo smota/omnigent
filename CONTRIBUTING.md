@@ -11,13 +11,14 @@ configuration in issues, tests, examples, or logs.
 This is a Python package with an optional frontend under `web/`. Use
 [`uv`](https://docs.astral.sh/uv/) for local development.
 
-**Supported dev OS:** macOS, Linux, and native Windows for core/server/web
-workflows. POSIX terminal-wrapper coverage is still Linux/macOS/WSL-only:
-`pexpect`, `pyte`, raw PTY, tmux control-mode, `termios`, `fcntl`, Unix signals,
-and fork-specific tests are marked `posix_only` and intentionally skipped on
-native Windows. On Windows, use WSL2 when you need that POSIX coverage; use
-native PowerShell/Windows Terminal when you are working on core package, server,
-web UI, SDK-harness, Job Object, or psmux-backed terminal code.
+**Supported dev OS:** macOS, Linux, WSL2, and native Windows for
+core/server/web workflows. POSIX terminal-wrapper coverage is still
+Linux/macOS/WSL-only: `pexpect`, `pyte`, raw PTY, tmux control-mode,
+`termios`, `fcntl`, Unix signals, and fork-specific tests are marked
+`posix_only` and intentionally skipped on native Windows. Use the
+[Windows QA matrix](docs/windows-qa-matrix.md) to decide which native
+PowerShell checks, screenshots, and known-gap notes are required for
+Windows-facing PRs.
 
 Install local prerequisites first:
 
