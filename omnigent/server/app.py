@@ -1172,13 +1172,32 @@ def create_app(
             )
 
     from omnigent.runner.routing import RunnerRouter
+    from omnigent.runner.transport_locator import LocalRunnerTransportLocator
     from omnigent.runner.transports.ws_tunnel.registry import TunnelRegistry
+    from omnigent.server._runner_transport import (
+        build_runner_transport_from_env,
+        runner_transport_env_configured,
+    )
     from omnigent.server.host_registry import HostRegistry, RunnerExitReports
 
     tunnel_registry = TunnelRegistry()
+    local_runner_ws_factory = None
+    runner_transport_name = "ws-tunnel"
+    runner_transport_locator = None
+    if runner_transport_env_configured():
+        local_runner_client, local_runner_ws_factory, runner_transport_name = (
+            build_runner_transport_from_env()
+        )
+        runner_transport_locator = LocalRunnerTransportLocator(local_runner_client)
+
+    logging.getLogger("omnigent.server.runner_transport").info(
+        "selected runner transport: %s",
+        runner_transport_name,
+    )
     runner_router = RunnerRouter(
         registry=tunnel_registry,
         conversation_store=conversation_store,
+        transport_locator=runner_transport_locator,
     )
     host_registry = HostRegistry()
     # Shared between the host tunnel (which records ``host.runner_exited``
@@ -1269,12 +1288,15 @@ def create_app(
         )
         set_resource_registry(resource_reg)
 
-        # Install the tunnel-backed WS factory so browser terminal
-        # attach can proxy frames over the same persistent WebSocket
-        # the runner already uses for HTTP.
-        from omnigent.server._runner_ws_tunnel import make_tunnel_ws_factory
+        # Install the runner WS factory used by browser terminal attach.
+        # Env-configured local runner transports dial the runner directly;
+        # otherwise attach frames are multiplexed over the runner tunnel.
+        if local_runner_ws_factory is not None:
+            set_runner_ws_factory(local_runner_ws_factory)
+        else:
+            from omnigent.server._runner_ws_tunnel import make_tunnel_ws_factory
 
-        set_runner_ws_factory(make_tunnel_ws_factory(runner_router, tunnel_registry))
+            set_runner_ws_factory(make_tunnel_ws_factory(runner_router, tunnel_registry))
 
         # MCP execution moved to the runner (designs/RUNNER_MCP.md);
         # SessionFilesystemRegistry moved to the runner. Both

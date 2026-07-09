@@ -19,9 +19,17 @@ RUNNER_TCP_BASE_URL_ENV = "OMNIGENT_RUNNER_TCP_BASE_URL"
 RUNNER_UDS_PATH_ENV = "OMNIGENT_RUNNER_UDS_PATH"
 
 
+def runner_transport_env_configured(environ: dict[str, str] | None = None) -> bool:
+    """Return whether local runner transport env configuration is present."""
+    env = os.environ if environ is None else environ
+    return bool(
+        _non_empty_env(env, RUNNER_TCP_BASE_URL_ENV) or _non_empty_env(env, RUNNER_UDS_PATH_ENV)
+    )
+
+
 def build_runner_transport_from_env(
     environ: dict[str, str] | None = None,
-) -> tuple[httpx.AsyncClient, RunnerWSFactory]:
+) -> tuple[httpx.AsyncClient, RunnerWSFactory, str]:
     """Build a local runner transport from environment configuration.
 
     ``OMNIGENT_RUNNER_TCP_BASE_URL`` is cross-platform and preferred. The UDS
@@ -30,10 +38,14 @@ def build_runner_transport_from_env(
     :func:`build_runner_transport`.
     """
     env = os.environ if environ is None else environ
-    return build_runner_transport(
-        tcp_base_url=_non_empty_env(env, RUNNER_TCP_BASE_URL_ENV),
-        uds_path=_non_empty_env(env, RUNNER_UDS_PATH_ENV),
+    tcp_base_url = _non_empty_env(env, RUNNER_TCP_BASE_URL_ENV)
+    uds_path = _non_empty_env(env, RUNNER_UDS_PATH_ENV)
+    client, ws_factory = build_runner_transport(
+        tcp_base_url=tcp_base_url,
+        uds_path=uds_path,
     )
+    selected = "tcp" if tcp_base_url else "uds"
+    return client, ws_factory, selected
 
 
 def _non_empty_env(env: dict[str, str], name: str) -> str | None:

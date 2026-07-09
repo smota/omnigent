@@ -8,6 +8,7 @@ import pytest
 from omnigent.entities import Conversation
 from omnigent.errors import ErrorCode, OmnigentError
 from omnigent.runner.routing import RunnerRouter, runner_dispatch_harness
+from omnigent.runner.transport_locator import LocalRunnerTransportLocator
 from omnigent.runner.transports.ws_tunnel.frames import HelloFrame
 from omnigent.runner.transports.ws_tunnel.registry import TunnelRegistry
 from omnigent.spec import AgentSpec, ExecutorSpec, LLMConfig
@@ -207,6 +208,18 @@ async def test_runner_router_requires_pinned_runner_to_be_online() -> None:
         _assert_omnigent_error(excinfo, code=ErrorCode.RUNNER_UNAVAILABLE)
     finally:
         await router.aclose()
+
+
+@pytest.mark.asyncio
+async def test_local_runner_transport_locator_returns_configured_client() -> None:
+    """Env-selected local transports are usable by the router seam."""
+    client = httpx.AsyncClient(base_url="http://127.0.0.1:7777")
+    locator = LocalRunnerTransportLocator(client)
+    try:
+        assert locator.client_for_runner("runner_one") is client
+        assert locator.client_for_runner("runner_two") is client
+    finally:
+        await locator.aclose()
 
 
 @pytest.mark.asyncio
