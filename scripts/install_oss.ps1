@@ -151,9 +151,9 @@ function Show-CapabilitySummary {
     Write-Host "  - Process containment: Windows Job Object backend."
     Write-Host "  - Not yet equivalent to Linux/macOS: filesystem/network sandboxing and L7 egress proxy."
     if (Test-Command "psmux") {
-        Write-Host "  - psmux detected; native terminal-wrapper support is still under development."
+        Write-Host "  - psmux detected; native Omnigent-managed terminal lifecycle is enabled."
     } else {
-        Write-Host "  - psmux not found; native terminal-wrapper support is still under development."
+        Write-Host "  - psmux not found; native Omnigent-managed terminals require psmux on PATH."
     }
 }
 

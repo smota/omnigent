@@ -114,3 +114,12 @@ def test_missing_uv_fails_with_winget_guidance(tmp_path: Path) -> None:
     r = run_ps("Show-DependencySummary", env=env)
     assert r.returncode != 0
     assert "winget install --id Astral-sh.Uv" in r.stderr
+
+
+def test_capability_summary_reports_psmux_terminal_boundary(tmp_path: Path) -> None:
+    env = {"PATH": str(tmp_path)}
+    r = run_ps("Show-CapabilitySummary", env=env)
+    assert r.returncode == 0, r.stderr
+    assert "Windows Job Object backend" in r.stdout
+    assert "filesystem/network sandboxing and L7 egress proxy" in r.stdout
+    assert "native Omnigent-managed terminals require psmux" in r.stdout
