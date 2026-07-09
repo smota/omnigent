@@ -1,0 +1,6 @@
+==> 03_runner_transport_tests
+2026-07-09T05:59:04.427138Z [info     ] structlog output capture disabled, no output directory specified [structlog_config.pytest]
+Running 18 items in this shard
+..................                                                       [100%]
+18 passed in 2.27s
+EXIT=0

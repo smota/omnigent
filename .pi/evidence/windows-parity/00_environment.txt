@@ -1,0 +1,38 @@
+==> 00_environment
+
+Name                           Value
+----                           -----
+PSVersion                      7.6.3
+PSEdition                      Core
+GitCommitId                    7.6.3
+OS                             Microsoft Windows 10.0.26200
+Platform                       Win32NT
+PSCompatibleVersions           {1.0, 2.0, 3.0, 4.0…}
+PSRemotingProtocolVersion      2.4
+SerializationVersion           1.1.0.1
+WSManStackVersion              3.0
+
+WindowsProductName : Windows 10 Home
+WindowsVersion     : 2009
+OsArchitecture     : ARM 64-bit Processor
+
+C:\Program Files\Git\clangarm64\bin\git.exe
+C:\Program Files\Git\cmd\git.exe
+C:\Users\samue\AppData\Local\hermes\bin\uv.exe
+C:\Users\samue\AppData\Local\Microsoft\WinGet\Links\uv.exe
+C:\Users\samue\AppData\Local\hermes\hermes-agent\venv\Scripts\python.exe
+C:\Users\samue\AppData\Local\Microsoft\WindowsApps\python.exe
+C:\Users\samue\AppData\Local\fnm_multishells\34640_1783445751734\node.exe
+C:\Users\samue\AppData\Local\hermes\node\node.exe
+C:\Users\samue\AppData\Local\fnm_multishells\34640_1783445751734\npm
+C:\Users\samue\AppData\Local\fnm_multishells\34640_1783445751734\npm.cmd
+C:\Users\samue\AppData\Local\hermes\node\npm
+C:\Users\samue\AppData\Local\hermes\node\npm.cmd
+C:\Users\samue\AppData\Local\Microsoft\WinGet\Links\psmux.exe
+uv 0.11.23 (3cdf50e09 2026-06-19 aarch64-pc-windows-msvc)
+Python 3.11.15
+v24.16.0
+11.18.0
+tmux 3.3.6
+
+EXIT=0

@@ -1,0 +1,54 @@
+==> 02_windows_safe_stable
+
+==> import smoke
+> uv run python -c import omnigent; print('import omnigent OK')
+import omnigent OK
+
+==> CLI smoke
+> uv run omnigent --help
+Usage: omnigent [OPTIONS] COMMAND [ARGS]...
+
+  Omnigent CLI.
+
+Options:
+  --version  Show the version and exit.
+  --help     Show this message and exit.
+
+Commands:
+  antigravity  Launch the Antigravity (agy) TUI in an Omnigent terminal.
+  attach       Attach the REPL to a LIVE session ù never starts anything.
+  claude       Launch Claude Code in an Omnigent terminal.
+  codex        Launch Codex TUI in an Omnigent terminal.
+  config       Get, set, and view Omnigent defaults and credentials.
+  cursor       Launch the Cursor TUI in an Omnigent terminal.
+  debby        Launch debby, the bundled two-headed brainstorming agent.
+  debug        Internal maintenance commands (advanced ù not needed for...
+  goose        Launch the Goose TUI in an Omnigent terminal.
+  hermes       Launch the Hermes TUI in an Omnigent terminal.
+  host         Register this machine as a host with a server.
+  kimi         Launch the Kimi Code TUI in an Omnigent terminal.
+  kiro         Launch the Kiro TUI in an Omnigent terminal.
+  login        Authenticate with a remote Omnigent server.
+  opencode     Launch OpenCode TUI in an Omnigent terminal.
+  pi           Launch Pi TUI in an Omnigent terminal.
+  polly        Launch polly, the bundled multi-agent coding orchestrator.
+  qwen         Launch the qwen (Qwen Code) TUI in an Omnigent terminal.
+  resume       Resume an Omnigent conversation, auto-dispatching by runtime.
+  run          Start a session with an Omnigent agent.
+  sandbox      Run an Omnigent host inside a remote sandbox.
+  server       Start the Omnigent server in the foreground, or manage the...
+  session      Manage Omnigent sessions.
+  setup        Launch the Omnigent first-time setup flow.
+  stop         Stop everything Omnigent is running on this machine.
+  update       Upgrade the omnigent CLI to the latest release on PyPI.
+  upgrade      Upgrade the omnigent CLI to the latest release on PyPI.
+
+==> stable Windows unit subset
+> uv run pytest tests/inner/test_proc_and_platform.py tests/runtime/test_process_manager.py -p no:cacheprovider -q
+2026-07-09T05:58:59.724800Z [info     ] structlog output capture disabled, no output directory specified [structlog_config.pytest]
+Running 27 items in this shard
+..sssss.............s......                                              [100%]
+21 passed, 6 skipped in 2.30s
+
+Windows-safe pytest subset complete.
+EXIT=0

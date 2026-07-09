@@ -1,0 +1,4 @@
+==> 06_precommit_key_windows_docs
+trim trailing whitespace.............................(no files to check)Skipped
+ensure files end with newline........................(no files to check)Skipped
+EXIT=0

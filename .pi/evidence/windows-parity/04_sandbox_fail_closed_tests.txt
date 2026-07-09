@@ -1,0 +1,6 @@
+==> 04_sandbox_fail_closed_tests
+2026-07-09T05:59:08.357468Z [info     ] structlog output capture disabled, no output directory specified [structlog_config.pytest]
+Running 6 items in this shard
+......                                                                   [100%]
+6 passed in 0.38s
+EXIT=0

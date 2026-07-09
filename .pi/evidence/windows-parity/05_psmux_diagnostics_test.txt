@@ -1,0 +1,6 @@
+==> 05_psmux_diagnostics_test
+2026-07-09T05:59:10.207601Z [info     ] structlog output capture disabled, no output directory specified [structlog_config.pytest]
+Running 1 items in this shard
+.                                                                        [100%]
+1 passed in 0.14s
+EXIT=0

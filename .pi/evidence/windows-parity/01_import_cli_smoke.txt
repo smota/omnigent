@@ -1,0 +1,39 @@
+==> 01_import_cli_smoke
+import omnigent OK
+Usage: omnigent [OPTIONS] COMMAND [ARGS]...
+
+  Omnigent CLI.
+
+Options:
+  --version  Show the version and exit.
+  --help     Show this message and exit.
+
+Commands:
+  antigravity  Launch the Antigravity (agy) TUI in an Omnigent terminal.
+  attach       Attach the REPL to a LIVE session ù never starts anything.
+  claude       Launch Claude Code in an Omnigent terminal.
+  codex        Launch Codex TUI in an Omnigent terminal.
+  config       Get, set, and view Omnigent defaults and credentials.
+  cursor       Launch the Cursor TUI in an Omnigent terminal.
+  debby        Launch debby, the bundled two-headed brainstorming agent.
+  debug        Internal maintenance commands (advanced ù not needed for...
+  goose        Launch the Goose TUI in an Omnigent terminal.
+  hermes       Launch the Hermes TUI in an Omnigent terminal.
+  host         Register this machine as a host with a server.
+  kimi         Launch the Kimi Code TUI in an Omnigent terminal.
+  kiro         Launch the Kiro TUI in an Omnigent terminal.
+  login        Authenticate with a remote Omnigent server.
+  opencode     Launch OpenCode TUI in an Omnigent terminal.
+  pi           Launch Pi TUI in an Omnigent terminal.
+  polly        Launch polly, the bundled multi-agent coding orchestrator.
+  qwen         Launch the qwen (Qwen Code) TUI in an Omnigent terminal.
+  resume       Resume an Omnigent conversation, auto-dispatching by runtime.
+  run          Start a session with an Omnigent agent.
+  sandbox      Run an Omnigent host inside a remote sandbox.
+  server       Start the Omnigent server in the foreground, or manage the...
+  session      Manage Omnigent sessions.
+  setup        Launch the Omnigent first-time setup flow.
+  stop         Stop everything Omnigent is running on this machine.
+  update       Upgrade the omnigent CLI to the latest release on PyPI.
+  upgrade      Upgrade the omnigent CLI to the latest release on PyPI.
+EXIT=0
