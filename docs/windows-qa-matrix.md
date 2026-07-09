@@ -8,7 +8,7 @@ so contributors know which evidence belongs in each PR.
 
 | Level | Signal | Required for merge? | Purpose |
 | --- | --- | --- | --- |
-| Hard CI | `windows-smoke` import/CLI smoke and Windows-support unit tests | Yes, once enabled by maintainers | Catch native Windows regressions in cross-platform primitives. |
+| Hard CI | `Windows smoke + unit` import/CLI smoke and Windows-support unit tests | Yes | Catch native Windows regressions in cross-platform primitives. |
 | Non-blocking CI | Broader `-m "not posix_only"` sweep in `.github/workflows/windows.yml` | No | Surface the next Windows parity gaps without blocking unrelated work. |
 | Manual QA | PowerShell transcript and screenshots/recordings where visual | Yes for Windows feature PRs | Prove native Windows behavior that CI cannot exercise reliably yet. |
 | POSIX parity | Linux/macOS/WSL full test coverage | Yes through existing CI | Keep Unix terminal/sandbox behavior unchanged. |
@@ -93,9 +93,11 @@ Windows PRs should include:
 
 ## Promotion path
 
-1. Keep broad native Windows coverage non-blocking while known import and PTY
-   gaps remain.
-2. Move stable Windows-safe subsets into hard CI as each feature lands.
-3. Promote the broad `-m "not posix_only"` sweep to required only after it is
+1. Keep the stable smoke/unit subset required through merge-ready.
+2. Keep broad native Windows coverage non-blocking while known PTY/runtime gaps
+   remain.
+3. Move additional Windows-safe subsets into the hard `Windows smoke + unit` job
+   as each feature lands.
+4. Promote the broad `-m "not posix_only"` sweep to required only after it is
    deterministic on `windows-latest` and all remaining POSIX-only tests are
    correctly marked.
