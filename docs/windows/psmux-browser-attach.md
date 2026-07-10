@@ -59,10 +59,10 @@ or screenshots showing:
 
 A gated evidence capture test lives at
 `tests/e2e_ui/windows/test_psmux_terminal_evidence.py`. Run it manually with
-`OMNIGENT_WINDOWS_EVIDENCE=1`; it writes screenshots under
-`.pi/evidence/windows-parity/` for attach, reconnect, ANSI limitation, and ended
-session states. Checked-in evidence for a specific branch belongs under
-`docs/windows/evidence/`.
+`OMNIGENT_WINDOWS_EVIDENCE=1`; it writes screenshots and transcript artifacts
+under `.pi/evidence/windows-parity/` for attach, reconnect, ANSI limitation, and
+ended session states. Those files are transient review artifacts: attach them to
+the PR or an issue comment, but do not commit them to the source tree.
 
 ## Path to parity
 
